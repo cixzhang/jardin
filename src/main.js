@@ -1,6 +1,15 @@
 
 const Renderer = require('./render');
+const Mapper = require('./mapper');
 const canvas = document.getElementById('canvas');
+
+// Expose on the window during development
+if (window.__DEV__) {
+  window.Jardin = {
+    Renderer,
+    Mapper,
+  };
+}
 
 const renderer = new Renderer(canvas);
 renderer.setupMap({

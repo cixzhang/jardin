@@ -16,7 +16,7 @@ function addLineNumbers (string, start, delim) {
   }).join('\n')
 }
 
-},{"pad-left":130}],2:[function(require,module,exports){
+},{"pad-left":131}],2:[function(require,module,exports){
 var dtype = require('dtype')
 
 module.exports = pack
@@ -2782,7 +2782,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":143}],14:[function(require,module,exports){
+},{"uniq":144}],14:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -3104,7 +3104,7 @@ function createBuffer(gl, data, type, usage) {
 
 module.exports = createBuffer
 
-},{"ndarray":128,"ndarray-ops":127,"typedarray-pool":142}],19:[function(require,module,exports){
+},{"ndarray":129,"ndarray-ops":128,"typedarray-pool":143}],19:[function(require,module,exports){
 module.exports = {
   0: 'NONE',
   1: 'ONE',
@@ -3466,7 +3466,7 @@ function formatCompilerError(errLog, src, type) {
 }
 
 
-},{"add-line-numbers":1,"gl-constants/lookup":20,"glsl-shader-name":114,"sprintf-js":141}],22:[function(require,module,exports){
+},{"add-line-numbers":1,"gl-constants/lookup":20,"glsl-shader-name":114,"sprintf-js":142}],22:[function(require,module,exports){
 var normalize = require('./normalize')
 var glType = require('gl-to-dtype')
 var createVAO = require('gl-vao')
@@ -5964,7 +5964,7 @@ function createProgram(gl, vref, fref, attribs, locations) {
   return getCache(gl).getProgram(vref, fref, attribs, locations)
 }
 
-},{"./GLError":55,"gl-format-compiler-error":21,"weakmap-shim":146}],61:[function(require,module,exports){
+},{"./GLError":55,"gl-format-compiler-error":21,"weakmap-shim":147}],61:[function(require,module,exports){
 module.exports = glToType
 function glToType (flag) {
   switch (flag) {
@@ -8075,6 +8075,218 @@ module.exports = function(arr) {
 }
 
 },{}],127:[function(require,module,exports){
+/*
+  https://github.com/banksean wrapped Makoto Matsumoto and Takuji Nishimura's code in a namespace
+  so it's better encapsulated. Now you can have multiple random number generators
+  and they won't stomp all over eachother's state.
+
+  If you want to use this as a substitute for Math.random(), use the random()
+  method like so:
+
+  var m = new MersenneTwister();
+  var randomNumber = m.random();
+
+  You can also call the other genrand_{foo}() methods on the instance.
+
+  If you want to use a specific seed in order to get a repeatable random
+  sequence, pass an integer into the constructor:
+
+  var m = new MersenneTwister(123);
+
+  and that will always produce the same random sequence.
+
+  Sean McCullough (banksean@gmail.com)
+*/
+
+/*
+   A C-program for MT19937, with initialization improved 2002/1/26.
+   Coded by Takuji Nishimura and Makoto Matsumoto.
+
+   Before using, initialize the state by using init_seed(seed)
+   or init_by_array(init_key, key_length).
+
+   Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+   All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+
+     1. Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+
+     2. Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
+        permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+   Any feedback is very welcome.
+   http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
+   email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
+*/
+
+var MersenneTwister = function(seed) {
+	if (seed == undefined) {
+		seed = new Date().getTime();
+	}
+
+	/* Period parameters */
+	this.N = 624;
+	this.M = 397;
+	this.MATRIX_A = 0x9908b0df;   /* constant vector a */
+	this.UPPER_MASK = 0x80000000; /* most significant w-r bits */
+	this.LOWER_MASK = 0x7fffffff; /* least significant r bits */
+
+	this.mt = new Array(this.N); /* the array for the state vector */
+	this.mti=this.N+1; /* mti==N+1 means mt[N] is not initialized */
+
+	if (seed.constructor == Array) {
+		this.init_by_array(seed, seed.length);
+	}
+	else {
+		this.init_seed(seed);
+	}
+}
+
+/* initializes mt[N] with a seed */
+/* origin name init_genrand */
+MersenneTwister.prototype.init_seed = function(s) {
+	this.mt[0] = s >>> 0;
+	for (this.mti=1; this.mti<this.N; this.mti++) {
+		var s = this.mt[this.mti-1] ^ (this.mt[this.mti-1] >>> 30);
+		this.mt[this.mti] = (((((s & 0xffff0000) >>> 16) * 1812433253) << 16) + (s & 0x0000ffff) * 1812433253)
+		+ this.mti;
+		/* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
+		/* In the previous versions, MSBs of the seed affect   */
+		/* only MSBs of the array mt[].                        */
+		/* 2002/01/09 modified by Makoto Matsumoto             */
+		this.mt[this.mti] >>>= 0;
+		/* for >32 bit machines */
+	}
+}
+
+/* initialize by an array with array-length */
+/* init_key is the array for initializing keys */
+/* key_length is its length */
+/* slight change for C++, 2004/2/26 */
+MersenneTwister.prototype.init_by_array = function(init_key, key_length) {
+	var i, j, k;
+	this.init_seed(19650218);
+	i=1; j=0;
+	k = (this.N>key_length ? this.N : key_length);
+	for (; k; k--) {
+		var s = this.mt[i-1] ^ (this.mt[i-1] >>> 30)
+		this.mt[i] = (this.mt[i] ^ (((((s & 0xffff0000) >>> 16) * 1664525) << 16) + ((s & 0x0000ffff) * 1664525)))
+		+ init_key[j] + j; /* non linear */
+		this.mt[i] >>>= 0; /* for WORDSIZE > 32 machines */
+		i++; j++;
+		if (i>=this.N) { this.mt[0] = this.mt[this.N-1]; i=1; }
+		if (j>=key_length) j=0;
+	}
+	for (k=this.N-1; k; k--) {
+		var s = this.mt[i-1] ^ (this.mt[i-1] >>> 30);
+		this.mt[i] = (this.mt[i] ^ (((((s & 0xffff0000) >>> 16) * 1566083941) << 16) + (s & 0x0000ffff) * 1566083941))
+		- i; /* non linear */
+		this.mt[i] >>>= 0; /* for WORDSIZE > 32 machines */
+		i++;
+		if (i>=this.N) { this.mt[0] = this.mt[this.N-1]; i=1; }
+	}
+
+	this.mt[0] = 0x80000000; /* MSB is 1; assuring non-zero initial array */
+}
+
+/* generates a random number on [0,0xffffffff]-interval */
+/* origin name genrand_int32 */
+MersenneTwister.prototype.random_int = function() {
+	var y;
+	var mag01 = new Array(0x0, this.MATRIX_A);
+	/* mag01[x] = x * MATRIX_A  for x=0,1 */
+
+	if (this.mti >= this.N) { /* generate N words at one time */
+		var kk;
+
+		if (this.mti == this.N+1)  /* if init_seed() has not been called, */
+			this.init_seed(5489);  /* a default initial seed is used */
+
+		for (kk=0;kk<this.N-this.M;kk++) {
+			y = (this.mt[kk]&this.UPPER_MASK)|(this.mt[kk+1]&this.LOWER_MASK);
+			this.mt[kk] = this.mt[kk+this.M] ^ (y >>> 1) ^ mag01[y & 0x1];
+		}
+		for (;kk<this.N-1;kk++) {
+			y = (this.mt[kk]&this.UPPER_MASK)|(this.mt[kk+1]&this.LOWER_MASK);
+			this.mt[kk] = this.mt[kk+(this.M-this.N)] ^ (y >>> 1) ^ mag01[y & 0x1];
+		}
+		y = (this.mt[this.N-1]&this.UPPER_MASK)|(this.mt[0]&this.LOWER_MASK);
+		this.mt[this.N-1] = this.mt[this.M-1] ^ (y >>> 1) ^ mag01[y & 0x1];
+
+		this.mti = 0;
+	}
+
+	y = this.mt[this.mti++];
+
+	/* Tempering */
+	y ^= (y >>> 11);
+	y ^= (y << 7) & 0x9d2c5680;
+	y ^= (y << 15) & 0xefc60000;
+	y ^= (y >>> 18);
+
+	return y >>> 0;
+}
+
+/* generates a random number on [0,0x7fffffff]-interval */
+/* origin name genrand_int31 */
+MersenneTwister.prototype.random_int31 = function() {
+	return (this.random_int()>>>1);
+}
+
+/* generates a random number on [0,1]-real-interval */
+/* origin name genrand_real1 */
+MersenneTwister.prototype.random_incl = function() {
+	return this.random_int()*(1.0/4294967295.0);
+	/* divided by 2^32-1 */
+}
+
+/* generates a random number on [0,1)-real-interval */
+MersenneTwister.prototype.random = function() {
+	return this.random_int()*(1.0/4294967296.0);
+	/* divided by 2^32 */
+}
+
+/* generates a random number on (0,1)-real-interval */
+/* origin name genrand_real3 */
+MersenneTwister.prototype.random_excl = function() {
+	return (this.random_int() + 0.5)*(1.0/4294967296.0);
+	/* divided by 2^32 */
+}
+
+/* generates a random number on [0,1) with 53-bit resolution*/
+/* origin name genrand_res53 */
+MersenneTwister.prototype.random_long = function() {
+	var a=this.random_int()>>>5, b=this.random_int()>>>6;
+	return(a*67108864.0+b)*(1.0/9007199254740992.0);
+}
+
+/* These real versions are due to Isaku Wada, 2002/01/09 added */
+
+module.exports = MersenneTwister;
+
+},{}],128:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -8537,7 +8749,7 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":12}],128:[function(require,module,exports){
+},{"cwise-compiler":12}],129:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -8882,7 +9094,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":123,"is-buffer":124}],129:[function(require,module,exports){
+},{"iota-array":123,"is-buffer":124}],130:[function(require,module,exports){
 'use strict';
 
 function ToObject(val) {
@@ -8910,7 +9122,7 @@ module.exports = Object.assign || function (target, source) {
 	return to;
 };
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 /*!
  * pad-left <https://github.com/jonschlinkert/pad-left>
  *
@@ -8926,10 +9138,10 @@ module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
   return repeat(ch, num) + str;
 };
-},{"repeat-string":140}],131:[function(require,module,exports){
+},{"repeat-string":141}],132:[function(require,module,exports){
 module.exports = require('./lib/camera-perspective')
 
-},{"./lib/camera-perspective":134}],132:[function(require,module,exports){
+},{"./lib/camera-perspective":135}],133:[function(require,module,exports){
 var assign = require('object-assign')
 var Ray = require('ray-3d')
 
@@ -9013,7 +9225,7 @@ module.exports = function cameraBase (opt) {
   })
 }
 
-},{"./camera-look-at":133,"camera-picking-ray":8,"camera-project":9,"camera-unproject":10,"gl-mat4/identity":38,"gl-mat4/invert":40,"gl-mat4/multiply":42,"gl-vec3/add":66,"gl-vec3/set":102,"object-assign":129,"ray-3d":135}],133:[function(require,module,exports){
+},{"./camera-look-at":134,"camera-picking-ray":8,"camera-project":9,"camera-unproject":10,"gl-mat4/identity":38,"gl-mat4/invert":40,"gl-mat4/multiply":42,"gl-vec3/add":66,"gl-vec3/set":102,"object-assign":130,"ray-3d":136}],134:[function(require,module,exports){
 // could be modularized...
 var cross = require('gl-vec3/cross')
 var sub = require('gl-vec3/subtract')
@@ -9048,7 +9260,7 @@ module.exports = function (direction, up, position, target) {
   }
 }
 
-},{"gl-vec3/copy":70,"gl-vec3/cross":72,"gl-vec3/dot":77,"gl-vec3/normalize":94,"gl-vec3/scale":100,"gl-vec3/subtract":108}],134:[function(require,module,exports){
+},{"gl-vec3/copy":70,"gl-vec3/cross":72,"gl-vec3/dot":77,"gl-vec3/normalize":94,"gl-vec3/scale":100,"gl-vec3/subtract":108}],135:[function(require,module,exports){
 var create = require('./camera-base')
 var assign = require('object-assign')
 var defined = require('defined')
@@ -9091,7 +9303,7 @@ module.exports = function cameraPerspective (opt) {
   })
 }
 
-},{"./camera-base":132,"defined":15,"gl-mat4/lookAt":41,"gl-mat4/perspective":44,"gl-vec3/add":66,"object-assign":129}],135:[function(require,module,exports){
+},{"./camera-base":133,"defined":15,"gl-mat4/lookAt":41,"gl-mat4/perspective":44,"gl-vec3/add":66,"object-assign":130}],136:[function(require,module,exports){
 var intersectRayTriangle = require('ray-triangle-intersection')
 var intersectRayPlane = require('ray-plane-intersection')
 var intersectRaySphere = require('ray-sphere-intersection')
@@ -9152,7 +9364,7 @@ Ray.prototype.intersectsTriangleCell = function (cell, positions) {
   return this.intersectsTriangle(tmpTriangle)
 }
 
-},{"gl-vec3/copy":70,"ray-aabb-intersection":136,"ray-plane-intersection":137,"ray-sphere-intersection":138,"ray-triangle-intersection":139}],136:[function(require,module,exports){
+},{"gl-vec3/copy":70,"ray-aabb-intersection":137,"ray-plane-intersection":138,"ray-sphere-intersection":139,"ray-triangle-intersection":140}],137:[function(require,module,exports){
 module.exports = intersection
 module.exports.distance = distance
 
@@ -9196,7 +9408,7 @@ function distance (ro, rd, aabb) {
   return lo > hi ? Infinity : lo
 }
 
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 var dot = require('gl-vec3/dot')
 var add = require('gl-vec3/add')
 var scale = require('gl-vec3/scale')
@@ -9222,7 +9434,7 @@ function intersectRayPlane(out, origin, direction, normal, dist) {
   }
 }
 
-},{"gl-vec3/add":66,"gl-vec3/copy":70,"gl-vec3/dot":77,"gl-vec3/scale":100}],138:[function(require,module,exports){
+},{"gl-vec3/add":66,"gl-vec3/copy":70,"gl-vec3/dot":77,"gl-vec3/scale":100}],139:[function(require,module,exports){
 var squaredDist = require('gl-vec3/squaredDistance')
 var dot = require('gl-vec3/dot')
 var sub = require('gl-vec3/subtract')
@@ -9251,7 +9463,7 @@ function intersectRaySphere (out, origin, direction, center, radius) {
   return add(out, out, origin)
 }
 
-},{"gl-vec3/add":66,"gl-vec3/dot":77,"gl-vec3/scale":100,"gl-vec3/scaleAndAdd":101,"gl-vec3/squaredDistance":105,"gl-vec3/subtract":108}],139:[function(require,module,exports){
+},{"gl-vec3/add":66,"gl-vec3/dot":77,"gl-vec3/scale":100,"gl-vec3/scaleAndAdd":101,"gl-vec3/squaredDistance":105,"gl-vec3/subtract":108}],140:[function(require,module,exports){
 var cross = require('gl-vec3/cross');
 var dot = require('gl-vec3/dot');
 var sub = require('gl-vec3/subtract');
@@ -9287,7 +9499,7 @@ function intersectTriangle (out, pt, dir, tri) {
     return out;
 }
 
-},{"gl-vec3/cross":72,"gl-vec3/dot":77,"gl-vec3/subtract":108}],140:[function(require,module,exports){
+},{"gl-vec3/cross":72,"gl-vec3/dot":77,"gl-vec3/subtract":108}],141:[function(require,module,exports){
 /*!
  * repeat-string <https://github.com/jonschlinkert/repeat-string>
  *
@@ -9359,7 +9571,7 @@ function repeat(str, num) {
   return res;
 }
 
-},{}],141:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /* global window, exports, define */
 
 !function() {
@@ -9579,7 +9791,7 @@ function repeat(str, num) {
     /* eslint-enable quote-props */
 }()
 
-},{}],142:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 (function (global,Buffer){
 'use strict'
 
@@ -9796,7 +10008,7 @@ exports.clearCache = function clearCache() {
   }
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"bit-twiddle":6,"buffer":7,"dup":17}],143:[function(require,module,exports){
+},{"bit-twiddle":6,"buffer":7,"dup":17}],144:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -9855,7 +10067,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],144:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 var hiddenStore = require('./hidden-store.js');
 
 module.exports = createStore;
@@ -9876,7 +10088,7 @@ function createStore() {
     };
 }
 
-},{"./hidden-store.js":145}],145:[function(require,module,exports){
+},{"./hidden-store.js":146}],146:[function(require,module,exports){
 module.exports = hiddenStore;
 
 function hiddenStore(obj, key) {
@@ -9894,7 +10106,7 @@ function hiddenStore(obj, key) {
     return store;
 }
 
-},{}],146:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
@@ -9925,10 +10137,19 @@ function weakMap() {
     }
 }
 
-},{"./create-store.js":144}],147:[function(require,module,exports){
+},{"./create-store.js":145}],148:[function(require,module,exports){
 
 const Renderer = require('./render');
+const Mapper = require('./mapper');
 const canvas = document.getElementById('canvas');
+
+// Expose on the window during development
+if (window.__DEV__) {
+  window.Jardin = {
+    Renderer,
+    Mapper,
+  };
+}
 
 const renderer = new Renderer(canvas);
 renderer.setupMap({
@@ -9960,7 +10181,117 @@ renderer.setupMap({
 renderer.render();
 
 
-},{"./render":148}],148:[function(require,module,exports){
+},{"./mapper":149,"./render":151}],149:[function(require,module,exports){
+
+const random = require('./random');
+const map = {};
+
+// Axis enums
+const AXES = {
+  QUADS: 0, // +
+  VERT: 1, // |
+  HORI: 2,  // -
+  DIAG_R: 3, // /
+  DIAG_L: 4, // \
+  DIAGS: 5,  // x
+};
+const AXIS_LIST = Object.values(AXES);
+
+// Shape enums
+const SHAPES = {
+  SQUARE: 0,
+  CIRCLE: 1,
+  DIAMOND: 2,
+};
+const SHAPE_LIST = Object.values(SHAPES);
+
+// Centerpiece enums
+const CENTERPIECES = {
+  EMPTY: 0,
+  HEDGE: 1,
+};
+const CENTERPIECE_LIST = Object.values(CENTERPIECES);
+
+function getMapKey(x, y) {
+  return `${x}.${y}`;
+}
+
+function generate(x, y) {
+  const mapKey = getMapKey(x, y);
+  if (map[mapKey]) return map[mapKey];
+
+  const axis = random.sample(AXIS_LIST);
+  const centerpiece = random.sample(CENTERPIECE_LIST);
+  const numShapes = random.randInt(0, 2);
+  const centerShape = random.sample(SHAPE_LIST);
+  const shapes = [];
+  for (let i = 0; i < numShapes; i++) {
+    shapes.push(random.sample(SHAPE_LIST));
+  }
+
+  const upMap = map[getMapKey(x, y-1)];
+  const downMap = map[getMapKey(x, y+1)];
+  const leftMap = map[getMapKey(x-1, y)];
+  const rightMap = map[getMapKey(x+1, y)];
+
+  const mapProps = {
+    axis,
+    shapes,
+    centerpiece,
+    centerShape,
+    paths: {
+      up: upMap ? upMap.paths.down : random.randBool(),
+      down: downMap ? downMap.paths.up : random.randBool(),
+      left: leftMap ? leftMap.paths.right : random.randBool(),
+      right: rightMap ? rightMap.paths.right : random.randBool(),
+    },
+  };
+
+  map[mapKey] = mapProps;
+  return mapProps;
+};
+
+module.exports = {
+  AXES,
+  SHAPES,
+  CENTERPIECES,
+  map,
+  generate,
+};
+
+
+},{"./random":150}],150:[function(require,module,exports){
+
+const MersenneTwister = require('mersenne-twister');
+
+const seed = window.__SEED__ || Date.now();
+
+const generator = new MersenneTwister(seed);
+
+function randInt(min, max) {
+  const delta = max - min;
+  const rand = Math.floor(generator.random() * delta);
+  return min + rand;
+}
+
+function randBool() {
+  return generator.random() > 0.5;
+}
+
+function sample(list) {
+  const item = randInt(0, list.length);
+  return list[item];
+}
+
+module.exports = {
+  random: () => generator.random(),
+  randInt,
+  randBool,
+  sample,
+};
+
+
+},{"mersenne-twister":127}],151:[function(require,module,exports){
 
 const createGeometry = require('gl-geometry');
 const createShader = require('gl-shader');
@@ -10054,4 +10385,4 @@ class Renderer {
 module.exports = Renderer;
 
 
-},{"gl-geometry":22,"gl-mat4":39,"gl-shader":54,"gl-vec3":84,"perspective-camera":131}]},{},[147]);
+},{"gl-geometry":22,"gl-mat4":39,"gl-shader":54,"gl-vec3":84,"perspective-camera":132}]},{},[148]);
