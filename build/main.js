@@ -10205,6 +10205,19 @@ const SHAPES = {
 };
 const SHAPE_LIST = Object.values(SHAPES);
 
+// Positions
+const POSITIONS = {
+  TOP_LEFT: [-0.5, -0.5],
+  TOP_CENTER: [0, -0.5],
+  TOP_RIGHT: [0.5, -0.5],
+  MID_LEFT: [-0.5, 0],
+  MID_RIGHT: [0.5, 0],
+  BOT_LEFT: [-0.5, 0.5],
+  BOT_CENTER: [0, 0.5],
+  BOT_RIGHT: [0.5, 0.5],
+};
+const POSITION_LIST = Object.values(POSITIONS);
+
 // Centerpiece enums
 const CENTERPIECES = {
   EMPTY: 0,
@@ -10225,8 +10238,10 @@ function generate(x, y) {
   const numShapes = random.randInt(0, 2);
   const centerShape = random.sample(SHAPE_LIST);
   const shapes = [];
+  const positions = [];
   for (let i = 0; i < numShapes; i++) {
     shapes.push(random.sample(SHAPE_LIST));
+    positions.push(random.sample(POSITION_LIST));
   }
 
   const upMap = map[getMapKey(x, y-1)];
