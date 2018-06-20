@@ -1,5 +1,6 @@
 
 const random = require('./random');
+
 const map = {};
 
 // Axis enums
