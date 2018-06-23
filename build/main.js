@@ -28270,11 +28270,15 @@ const _v2_2 = vec2.create();
 const _v2_3 = vec2.create();
 const _v2_4 = vec2.create();
 
-// vec2s for carveRect and carveDiamond
+// vec2s for carveShape
 const _v2_5 = vec2.create();
 const _v2_6 = vec2.create();
 const _v2_7 = vec2.create();
 const _v2_8 = vec2.create();
+const _v2_9 = vec2.create();
+const _v2_10 = vec2.create();
+const _v2_11 = vec2.create();
+const _v2_12 = vec2.create();
 
 const halfedges = Halfedges.makeRing(4);
 const naturals = [
@@ -28408,7 +28412,7 @@ function gridify(size=2) {
     vec2.set(_v2_5, a - 1, 0);
     vec2.set(_v2_6, a, 1);
     splitWithSegment(_v2_5, _v2_6);
-    a += delta;
+    a += delta * 2;
   }
 
   // top left to bottom right
@@ -28416,7 +28420,7 @@ function gridify(size=2) {
     vec2.set(_v2_5, b - 1, 1);
     vec2.set(_v2_6, b, 0);
     splitWithSegment(_v2_5, _v2_6);
-    b += delta;
+    b += delta * 2;
   }
 }
 
@@ -28457,6 +28461,23 @@ function carveDiamond(bx, by, w, h) {
     vec2.set(_v2_8, bx-w/2-adj, by+(h/2)),
   ];
   return carveShape(diamond);
+}
+
+function carveCircle(cx, cy, r) {
+  const radj = r + 0.01;
+  const angle = 2 * Math.PI / 8;
+
+  const circle = [
+    vec2.set(_v2_5, cx + radj * Math.cos(angle * 0), cy + radj * Math.sin(angle * 0)),
+    vec2.set(_v2_6, cx + radj * Math.cos(angle * 1), cy + radj * Math.sin(angle * 1)),
+    vec2.set(_v2_7, cx + radj * Math.cos(angle * 2), cy + radj * Math.sin(angle * 2)),
+    vec2.set(_v2_8, cx + radj * Math.cos(angle * 3), cy + radj * Math.sin(angle * 3)),
+    vec2.set(_v2_9, cx + radj * Math.cos(angle * 4), cy + radj * Math.sin(angle * 4)),
+    vec2.set(_v2_10, cx + radj * Math.cos(angle * 5), cy + radj * Math.sin(angle * 5)),
+    vec2.set(_v2_11, cx + radj * Math.cos(angle * 6), cy + radj * Math.sin(angle * 6)),
+    vec2.set(_v2_12, cx + radj * Math.cos(angle * 7), cy + radj * Math.sin(angle * 7)),
+  ];
+  return carveShape(circle);
 }
 
 // Convert polygons into triangles for rendering
@@ -28507,6 +28528,7 @@ module.exports = {
   carveShape,
   carveRect,
   carveDiamond,
+  carveCircle,
 };
 
 },{"./geometry":193,"./halfedges":194,"./mapper":197,"gl-vec2":83,"gl-vec3":128,"lodash":171}],196:[function(require,module,exports){
@@ -28528,7 +28550,7 @@ if (window.__DEV__) {
 }
 
 // Setup the hedges
-Hedges.gridify(9);
+Hedges.gridify(16);
 
 const _v2_0 = vec2.create();
 const _v2_1 = vec2.create();
@@ -28556,12 +28578,12 @@ const path_b = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
 const path_l = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
 const path_r = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
 
-const SQUARE_SIZE = 1/7 * 2.5;
-const sq_center = Hedges.carveRect(
-  0.5 - SQUARE_SIZE/2,
-  0.5 - SQUARE_SIZE/2,
-  SQUARE_SIZE,
-  SQUARE_SIZE
+const SQU_SIZE = 1/7 * 1.5;
+const squ_center = Hedges.carveRect(
+  0.5 - SQU_SIZE/2,
+  0.5 - SQU_SIZE/2,
+  SQU_SIZE,
+  SQU_SIZE
 );
 
 const DIA_SIZE = 1/7 * 3;
@@ -28572,6 +28594,9 @@ const dia_center = Hedges.carveDiamond(
   DIA_SIZE,
 );
 
+const CIR_SIZE = 1/7 * 1.5;
+const cir_center = Hedges.carveCircle(0.5, 0.5, CIR_SIZE);
+
 const renderer = new Renderer(canvas);
 renderer.setupMap(
   Hedges.form(),
@@ -28580,7 +28605,7 @@ renderer.setupMap(
     ...path_b,
     ...path_l,
     ...path_r,
-    ...dia_center,
+    ...cir_center,
   },
   __DEV__ && true
 );
