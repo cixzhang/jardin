@@ -52,6 +52,14 @@ const sq_center = Hedges.carveRect(
   SQUARE_SIZE
 );
 
+const DIA_SIZE = 1/7 * 3;
+const dia_center = Hedges.carveDiamond(
+  0.5,
+  0.5 - DIA_SIZE/2,
+  DIA_SIZE,
+  DIA_SIZE,
+);
+
 const renderer = new Renderer(canvas);
 renderer.setupMap(
   Hedges.form(),
@@ -60,7 +68,7 @@ renderer.setupMap(
     ...path_b,
     ...path_l,
     ...path_r,
-    ...sq_center,
+    ...dia_center,
   },
   __DEV__ && true
 );

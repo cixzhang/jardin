@@ -28448,6 +28448,17 @@ function carveRect(x, y, w, h) {
   return carveShape(rect);
 }
 
+function carveDiamond(bx, by, w, h) {
+  const adj = 0.01;
+  const diamond = [
+    vec2.set(_v2_5, bx, by-adj),
+    vec2.set(_v2_6, bx+w/2+adj, by+(h/2)),
+    vec2.set(_v2_7, bx, by+h+adj),
+    vec2.set(_v2_8, bx-w/2-adj, by+(h/2)),
+  ];
+  return carveShape(diamond);
+}
+
 // Convert polygons into triangles for rendering
 function triangulate(points) {
   if (points.length <= 3) return [points];
@@ -28495,6 +28506,7 @@ module.exports = {
   splitShape,
   carveShape,
   carveRect,
+  carveDiamond,
 };
 
 },{"./geometry":193,"./halfedges":194,"./mapper":197,"gl-vec2":83,"gl-vec3":128,"lodash":171}],196:[function(require,module,exports){
@@ -28552,6 +28564,14 @@ const sq_center = Hedges.carveRect(
   SQUARE_SIZE
 );
 
+const DIA_SIZE = 1/7 * 3;
+const dia_center = Hedges.carveDiamond(
+  0.5,
+  0.5 - DIA_SIZE/2,
+  DIA_SIZE,
+  DIA_SIZE,
+);
+
 const renderer = new Renderer(canvas);
 renderer.setupMap(
   Hedges.form(),
@@ -28560,7 +28580,7 @@ renderer.setupMap(
     ...path_b,
     ...path_l,
     ...path_r,
-    ...sq_center,
+    ...dia_center,
   },
   __DEV__ && true
 );

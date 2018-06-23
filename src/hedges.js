@@ -193,6 +193,17 @@ function carveRect(x, y, w, h) {
   return carveShape(rect);
 }
 
+function carveDiamond(bx, by, w, h) {
+  const adj = 0.01;
+  const diamond = [
+    vec2.set(_v2_5, bx, by-adj),
+    vec2.set(_v2_6, bx+w/2+adj, by+(h/2)),
+    vec2.set(_v2_7, bx, by+h+adj),
+    vec2.set(_v2_8, bx-w/2-adj, by+(h/2)),
+  ];
+  return carveShape(diamond);
+}
+
 // Convert polygons into triangles for rendering
 function triangulate(points) {
   if (points.length <= 3) return [points];
@@ -240,4 +251,5 @@ module.exports = {
   splitShape,
   carveShape,
   carveRect,
+  carveDiamond,
 };
