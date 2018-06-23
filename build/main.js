@@ -28398,13 +28398,25 @@ function form() {
   return {positions, cells};
 }
 
+// PATHS
+const PATH_WIDTH = 0.1;
+// | path
+carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 1.2);
+// - path
+carveRect(-0.1, 0.5 - PATH_WIDTH/2, 1.2, PATH_WIDTH);
+
+// CENTERPIECES
+// square centerpiece
+const SQUARE_SIZE = 0.15;
+carveRect(0.5 - SQUARE_SIZE/2, 0.5 - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE);
+
 module.exports = {
   halfedges,
   naturals,
   trace,
-  form,
-  carveRect,
+  form: form(),
 };
+
 
 },{"./geometry":193,"./halfedges":194,"./mapper":197,"gl-vec2":83,"gl-vec3":128,"lodash":171}],196:[function(require,module,exports){
 
@@ -28422,21 +28434,36 @@ if (window.__DEV__) {
   };
 }
 
-// PATHS
-const PATH_WIDTH = 0.1;
-// | path
-Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 1.2);
-// - path
-Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 1.2, PATH_WIDTH);
-
-// CENTERPIECES
-// square centerpiece
-const SQUARE_SIZE = 0.15;
-Hedges.carveRect(0.5 - SQUARE_SIZE/2, 0.5 - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE);
-
 const renderer = new Renderer(canvas);
-renderer.setupMap(Hedges.form(), true);
+// renderer.setupMap({
+//   positions: [
+//     [-1, 0, -1],
+//     [1, 0, -1],
+//     [1, 0, 1],
+//     [-1, 0, 1],
+//     [-1, 0.5, -1],
+//     [1, 0.5, -1],
+//     [1, 0.5, 1],
+//     [-1, 0.5, 1],
+//   ],
+//   cells: [
+//     [0, 1, 2],
+//     [0, 2, 3],
+//     [0, 1, 4],
+//     [4, 1, 5],
+//     [5, 1, 6],
+//     [1, 6, 2],
+//     [6, 2, 3],
+//     [7, 6, 3],
+//     [0, 7, 3],
+//     [4, 7, 0],
+//     [4, 5, 6],
+//     [4, 6, 7],
+//   ],
+// });
+renderer.setupMap(Hedges.form, true);
 renderer.render();
+
 
 },{"./hedges":195,"./mapper":197,"./render":199}],197:[function(require,module,exports){
 

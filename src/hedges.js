@@ -169,10 +169,22 @@ function form() {
   return {positions, cells};
 }
 
+// PATHS
+const PATH_WIDTH = 0.1;
+// | path
+carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 1.2);
+// - path
+carveRect(-0.1, 0.5 - PATH_WIDTH/2, 1.2, PATH_WIDTH);
+
+// CENTERPIECES
+// square centerpiece
+const SQUARE_SIZE = 0.15;
+carveRect(0.5 - SQUARE_SIZE/2, 0.5 - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE);
+
 module.exports = {
   halfedges,
   naturals,
   trace,
-  form,
-  carveRect,
+  form: form(),
 };
+
