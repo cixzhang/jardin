@@ -27927,6 +27927,9 @@ const EPSILON = 0.000001;
 
 var _v2_0 = vec2.create();
 var _v2_1 = vec2.create();
+var _v2_2 = vec2.create();
+var _v2_3 = vec2.create();
+var _v2_4 = vec2.create();
 
 // Returns null if the lines are parallel.
 function ll(result, x0, d0, x1, d1) {
@@ -27989,7 +27992,26 @@ function ss(result, x0, d0, l0, x1, d1, l1) {
   return null;
 }
 
-module.exports = { ll, ss, EPSILON };
+function contained(v2, polygon) {
+  // using crossing number method since we know all shapes will be convex
+  const ray = vec2.set(_v2_2, 1, 0);
+  let intersects = 0;
+
+  polygon.forEach((p, i) => {
+    const next = i === (polygon.length - 1) ? polygon[0] : polygon[i+1];
+    const pd = vec2.sub(_v2_4, next, p);
+    const pl = vec2.length(pd);
+
+    const result = ss(_v2_3, v2, ray, 1, p, pd, pl);
+    if (result) {
+      intersects++;
+    }
+  });
+
+  return intersects % 2;
+}
+
+module.exports = { ll, ss, contained, EPSILON };
 
 
 },{"gl-vec2":83,"lodash":171}],194:[function(require,module,exports){
@@ -28232,7 +28254,7 @@ const _ = require('lodash');
 const vec2 = require('gl-vec2');
 const vec3 = require('gl-vec3');
 const Halfedges = require('./halfedges');
-const {ss, EPSILON} = require('./geometry');
+const {ss, contained, EPSILON} = require('./geometry');
 const {AXES} = require('./mapper');
 
 // vec2s for splitByLerp
@@ -28247,6 +28269,8 @@ const _v2_4 = vec2.create();
 // vec2s for carveRect and carveDiamond
 const _v2_5 = vec2.create();
 const _v2_6 = vec2.create();
+const _v2_7 = vec2.create();
+const _v2_8 = vec2.create();
 
 const halfedges = Halfedges.makeRing(4);
 const naturals = [
@@ -28255,6 +28279,7 @@ const naturals = [
   vec2.set(vec2.create(), 0, 1),
   vec2.set(vec2.create(), 1, 1)
 ];
+let globalId = 0;
 
 // Traces the hedges for debugging and identification.
 function trace() {
@@ -28345,26 +28370,76 @@ function splitWithSegment(v1, v2) {
   }
 }
 
+function splitShape(shape) {
+  shape.forEach((p, i) => {
+    const next = (i+1 === shape.length) ? shape[0]: shape[i+1];
+    splitWithSegment(p, next);
+    // TODO: deal with dangling segments?
+  });
+}
+
+function gridify(size=2) {
+  const delta = 1/size;
+  let x = 0;
+  let y = 0;
+  let a = 0;
+  let b = 0;
+
+  while (x < 1) {
+    vec2.set(_v2_5, x, 0);
+    vec2.set(_v2_6, x, 1);
+    splitWithSegment(_v2_5, _v2_6);
+    x += delta;
+  }
+
+  while (y < 1) {
+    vec2.set(_v2_5, 0, y);
+    vec2.set(_v2_6, 1, y);
+    splitWithSegment(_v2_5, _v2_6);
+    y += delta;
+  }
+
+  // bottom left to top right
+  while (a < 2) {
+    vec2.set(_v2_5, a - 1, 0);
+    vec2.set(_v2_6, a, 1);
+    splitWithSegment(_v2_5, _v2_6);
+    a += delta;
+  }
+
+  // top left to bottom right
+  while (b < 2) {
+    vec2.set(_v2_5, b - 1, 1);
+    vec2.set(_v2_6, b, 0);
+    splitWithSegment(_v2_5, _v2_6);
+    b += delta;
+  }
+}
+
+function carveShape(shape) {
+  const id = globalId++;
+  const cycles = {};
+  halfedges.cycles.forEach((cycle, i) => {
+    const carved = _.every(cycle, h => {
+      const natural = naturals[halfedges.src(h)];
+      return contained(natural, shape);
+    });
+    if (carved) {
+      cycles[i] = i;
+    }
+  });
+  return cycles;
+}
+
 function carveRect(x, y, w, h) {
-  // top
-  let v1 = vec2.set(_v2_5, x, y+h);
-  let v2 = vec2.set(_v2_6, x+w, y+h);
-  splitWithSegment(v1, v2);
-
-  // left
-  v1 = vec2.set(_v2_5, x, y);
-  v2 = vec2.set(_v2_6, x, y+h);
-  splitWithSegment(v1, v2);
-
-  // bottom
-  v1 = vec2.set(_v2_5, x, y);
-  v2 = vec2.set(_v2_6, x+w, y);
-  splitWithSegment(v1, v2);
-
-  // right
-  v1 = vec2.set(_v2_5, x+w, y);
-  v2 = vec2.set(_v2_6, x+w, y+h);
-  splitWithSegment(v1, v2);
+  // find cycles encased in rectangle
+  const rect = [
+    vec2.set(_v2_5, x, y),
+    vec2.set(_v2_6, x+w, y),
+    vec2.set(_v2_7, x+w, y+h),
+    vec2.set(_v2_8, x, y+h),
+  ];
+  return carveShape(rect);
 }
 
 // Convert polygons into triangles for rendering
@@ -28372,57 +28447,57 @@ function triangulate(points) {
   if (points.length <= 3) return [points];
   const triangles = [];
   for (var i = 1; i < points.length; i++) {
-    let v = vec3.create();
-    vec3.set(v, points[0], points[i-1], points[i]);
-    triangles.push(v);
+    triangles.push([points[0], points[i-1], points[i]]);
   }
   return triangles;
 }
 
 // Computes positions and cells for rendering
 function form() {
-  const positions = naturals.map(n2 => {
-    const n3 = vec3.create();
-    vec3.set(n3, n2[0], 0, n2[1]);
-    return n3;
-  });
+  const vec2ToVec3 = (v2) => {
+    const v3 = vec3.create();
+    vec3.set(v3, v2[0], 0.1, v2[1]);
+    return v3;
+  };
 
-  const cells = [];
+  const positions = [];
+  const cycles = [];
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
-      srcs = cycle.map(h => halfedges.src(h));
-      cells.push.apply(cells, triangulate(srcs));
+      const srcs = cycle.map(h => {
+        const n = naturals[halfedges.src(h)];
+        return vec2ToVec3(n);
+      });
+      const triangulated = triangulate(srcs);
+      triangulated.forEach(t => {
+        positions.push(...t);
+        cycles.push(...(t.map(_ => i)));
+      });
     }
   );
-  return {positions, cells};
+  return {positions, cycles};
 }
-
-// PATHS
-const PATH_WIDTH = 0.1;
-// | path
-carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 1.2);
-// - path
-carveRect(-0.1, 0.5 - PATH_WIDTH/2, 1.2, PATH_WIDTH);
-
-// CENTERPIECES
-// square centerpiece
-const SQUARE_SIZE = 0.15;
-carveRect(0.5 - SQUARE_SIZE/2, 0.5 - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE);
 
 module.exports = {
   halfedges,
   naturals,
   trace,
-  form: form(),
+  form,
+  gridify,
+  split: splitWithSegment,
+  splitShape,
+  carveShape,
+  carveRect,
 };
-
 
 },{"./geometry":193,"./halfedges":194,"./mapper":197,"gl-vec2":83,"gl-vec3":128,"lodash":171}],196:[function(require,module,exports){
 
 const Renderer = require('./render');
 const Mapper = require('./mapper');
 const Hedges = require('./hedges');
+
+const vec2 = require('gl-vec2');
 const canvas = document.getElementById('canvas');
 
 // Expose on the window during development
@@ -28434,38 +28509,48 @@ if (window.__DEV__) {
   };
 }
 
+// Setup the hedges
+Hedges.gridify(7);
+
+const _v2_0 = vec2.create();
+const _v2_1 = vec2.create();
+
+const PATH_WIDTH = 0.05;
+// Split out the path
+Hedges.split(
+  vec2.set(_v2_0, -0.1, 0.5 - PATH_WIDTH/2),
+  vec2.set(_v2_1,  1.1, 0.5 - PATH_WIDTH/2),
+);
+Hedges.split(
+  vec2.set(_v2_0,  1.1, 0.5 + PATH_WIDTH/2),
+  vec2.set(_v2_1, -0.1, 0.5 + PATH_WIDTH/2),
+);
+Hedges.split(
+  vec2.set(_v2_0, 0.5 + PATH_WIDTH/2, -0.1),
+  vec2.set(_v2_1, 0.5 + PATH_WIDTH/2,  1.1),
+);
+Hedges.split(
+  vec2.set(_v2_0, 0.5 - PATH_WIDTH/2,  1.1),
+  vec2.set(_v2_1, 0.5 - PATH_WIDTH/2, -0.1),
+);
+const path_t = Hedges.carveRect(0.5 - PATH_WIDTH/2,  0.5, PATH_WIDTH, 0.6);
+const path_b = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
+const path_l = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+const path_r = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+
+const SQUARE_SIZE = Math.ceil(1/7 * 3);
+const sq_center = Hedges.carveRect(
+  0.5 - SQUARE_SIZE/2,
+  0.5 - SQUARE_SIZE/2,
+  SQUARE_SIZE,
+  SQUARE_SIZE
+);
+
 const renderer = new Renderer(canvas);
-// renderer.setupMap({
-//   positions: [
-//     [-1, 0, -1],
-//     [1, 0, -1],
-//     [1, 0, 1],
-//     [-1, 0, 1],
-//     [-1, 0.5, -1],
-//     [1, 0.5, -1],
-//     [1, 0.5, 1],
-//     [-1, 0.5, 1],
-//   ],
-//   cells: [
-//     [0, 1, 2],
-//     [0, 2, 3],
-//     [0, 1, 4],
-//     [4, 1, 5],
-//     [5, 1, 6],
-//     [1, 6, 2],
-//     [6, 2, 3],
-//     [7, 6, 3],
-//     [0, 7, 3],
-//     [4, 7, 0],
-//     [4, 5, 6],
-//     [4, 6, 7],
-//   ],
-// });
-renderer.setupMap(Hedges.form, true);
+renderer.setupMap(Hedges.form(), {}, true);
 renderer.render();
 
-
-},{"./hedges":195,"./mapper":197,"./render":199}],197:[function(require,module,exports){
+},{"./hedges":195,"./mapper":197,"./render":199,"gl-vec2":83}],197:[function(require,module,exports){
 
 const random = require('./random');
 
@@ -28602,13 +28687,16 @@ const vec3 = require('gl-vec3');
 const vs = `
   attribute vec3 position;
   attribute vec3 color;
+  attribute float hidden;
   uniform mat4 projection, view;
   varying vec3 v_position;
   varying vec3 v_color;
+  varying float v_hidden;
   void main() {
     gl_Position = projection*view*vec4(position, 1.0);
     v_position = gl_Position.xyz;
     v_color = color;
+    v_hidden = hidden;
   }
 `;
 
@@ -28616,8 +28704,9 @@ const fs = `
   precision mediump float;
   varying vec3 v_position;
   varying vec3 v_color;
+  varying float v_hidden;
   void main() {
-    gl_FragColor = vec4(v_color, 1.0);
+    gl_FragColor = vec4(v_color, 1.0 - v_hidden);
   }
 `;
 
@@ -28631,7 +28720,7 @@ class Renderer {
     });
     this.eye = vec3.create();
     vec3.set(this.eye, 0.5, 0, 0.5);
-    this.mapgeo = null;
+    this.mapgeo = createGeometry(this.gl);
 
     this.colorHedge = vec3.create();
     vec3.set(this.colorHedge, 0.60, 0.69, 0.23);
@@ -28640,25 +28729,29 @@ class Renderer {
       vec3.set(vec3.create(), 1, 0, 0),
       vec3.set(vec3.create(), 0, 1, 0),
       vec3.set(vec3.create(), 0, 0, 1),
+      vec3.set(vec3.create(), 1, 1, 0),
+      vec3.set(vec3.create(), 0, 1, 1),
+      vec3.set(vec3.create(), 1, 0, 1),
     ];
 
     this.gl.enable(this.gl.DEPTH_TEST);
   }
 
-  setupMap(map, debug) {
-    // We're accumulating map geometries to avoid GC
-    // TODO: we'll want to store this so we can restore
-    // maps by x/y coordinates or something similar.
-    // Maybe add boundaries to avoid OOM issues.
-    const colors = map.cells.map((c, i) => {
-      return debug ? this.colorsDebug[i % 3] : this.colorHedge;
+  setupMap(map, hiddenCycles, debug) {
+    const colors = [];
+    const hidden = [];
+    map.positions.forEach((_, i) => {
+      const color = debug ?
+        this.colorsDebug[Math.floor(i/3) % 6] :
+        this.colorHedge;
+      colors.push(color);
+      hidden.push(map.cycles[i] in hiddenCycles ? 1 : 0);
     });
 
-    const geo = createGeometry(this.gl)
-      .attr('position', map)
-      .attr('color', colors);
-
-    this.mapgeo = geo;
+    this.mapgeo
+      .attr('position', map.positions)
+      .attr('color', colors)
+      .attr('hidden', hidden, {size: 1});
   }
 
   resize() {
