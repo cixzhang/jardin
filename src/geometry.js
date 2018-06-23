@@ -7,6 +7,9 @@ const EPSILON = 0.000001;
 
 var _v2_0 = vec2.create();
 var _v2_1 = vec2.create();
+var _v2_2 = vec2.create();
+var _v2_3 = vec2.create();
+var _v2_4 = vec2.create();
 
 // Returns null if the lines are parallel.
 function ll(result, x0, d0, x1, d1) {
@@ -69,5 +72,24 @@ function ss(result, x0, d0, l0, x1, d1, l1) {
   return null;
 }
 
-module.exports = { ll, ss, EPSILON };
+function contained(v2, polygon) {
+  // using crossing number method since we know all shapes will be convex
+  const ray = vec2.set(_v2_2, 1, 0);
+  let intersects = 0;
+
+  polygon.forEach((p, i) => {
+    const next = i === (polygon.length - 1) ? polygon[0] : polygon[i+1];
+    const pd = vec2.sub(_v2_4, next, p);
+    const pl = vec2.length(pd);
+
+    const result = ss(_v2_3, v2, ray, 1, p, pd, pl);
+    if (result) {
+      intersects++;
+    }
+  });
+
+  return intersects % 2;
+}
+
+module.exports = { ll, ss, contained, EPSILON };
 

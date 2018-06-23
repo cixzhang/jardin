@@ -46,18 +46,21 @@ class Renderer {
       vec3.set(vec3.create(), 1, 0, 0),
       vec3.set(vec3.create(), 0, 1, 0),
       vec3.set(vec3.create(), 0, 0, 1),
+      vec3.set(vec3.create(), 1, 1, 0),
+      vec3.set(vec3.create(), 0, 1, 1),
+      vec3.set(vec3.create(), 1, 0, 1),
     ];
 
     this.gl.enable(this.gl.DEPTH_TEST);
   }
 
   setupMap(map, debug) {
-    // We're accumulating map geometries to avoid GC
-    // TODO: we'll want to store this so we can restore
-    // maps by x/y coordinates or something similar.
-    // Maybe add boundaries to avoid OOM issues.
-    const colors = map.cells.map((c, i) => {
-      return debug ? this.colorsDebug[i % 3] : this.colorHedge;
+    const colors = [];
+    map.forEach((_, i) => {
+      const color = debug ?
+        this.colorsDebug[Math.floor(i/3) % 6] :
+        this.colorHedge;
+      colors.push(color);
     });
 
     const geo = createGeometry(this.gl)

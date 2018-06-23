@@ -13,33 +13,47 @@ if (window.__DEV__) {
   };
 }
 
-const renderer = new Renderer(canvas);
-// renderer.setupMap({
-//   positions: [
-//     [-1, 0, -1],
-//     [1, 0, -1],
-//     [1, 0, 1],
-//     [-1, 0, 1],
-//     [-1, 0.5, -1],
-//     [1, 0.5, -1],
-//     [1, 0.5, 1],
-//     [-1, 0.5, 1],
-//   ],
-//   cells: [
-//     [0, 1, 2],
-//     [0, 2, 3],
-//     [0, 1, 4],
-//     [4, 1, 5],
-//     [5, 1, 6],
-//     [1, 6, 2],
-//     [6, 2, 3],
-//     [7, 6, 3],
-//     [0, 7, 3],
-//     [4, 7, 0],
-//     [4, 5, 6],
-//     [4, 6, 7],
-//   ],
-// });
-renderer.setupMap(Hedges.form, true);
-renderer.render();
+// Setup the hedges
+Hedges.gridify(15);
 
+const PATH_WIDTH = 0.1;
+const PATH_T = Hedges.carveRect(0.5 - PATH_WIDTH/2,  0.5, PATH_WIDTH, 0.6);
+const PATH_B = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
+const PATH_L = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+const PATH_R = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+
+// const SQUARE_SIZE = 0.15;
+// const SQ_CENTER = carveRect(
+//   0.5 - SQUARE_SIZE/2,
+//   0.5 - SQUARE_SIZE/2,
+//   SQUARE_SIZE,
+//   SQUARE_SIZE
+// );
+// const SQ_BL = carveRect(
+//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
+//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
+//   SQUARE_SIZE,
+//   SQUARE_SIZE,
+// );
+// const SQ_BR = carveRect(
+//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
+//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
+//   SQUARE_SIZE,
+//   SQUARE_SIZE,
+// );
+// const SQ_TL = carveRect(
+//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
+//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
+//   SQUARE_SIZE,
+//   SQUARE_SIZE,
+// );
+// const SQ_TR = carveRect(
+//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
+//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
+//   SQUARE_SIZE,
+//   SQUARE_SIZE,
+// );
+
+const renderer = new Renderer(canvas);
+renderer.setupMap(Hedges.form(), true);
+renderer.render();
