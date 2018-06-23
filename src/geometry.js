@@ -73,23 +73,27 @@ function ss(result, x0, d0, l0, x1, d1, l1) {
 }
 
 function contained(v2, polygon) {
-  // using crossing number method since we know all shapes will be convex
-  const ray = vec2.set(_v2_2, 1, 0);
-  let intersects = 0;
+  // Polygons must be ccw
+  const ray = vec2.set(_v2_1, 1, 0);
+  let wn = 0;
 
   polygon.forEach((p, i) => {
     const next = i === (polygon.length - 1) ? polygon[0] : polygon[i+1];
-    const pd = vec2.sub(_v2_4, next, p);
+    const pd = vec2.sub(_v2_2, next, p);
     const pl = vec2.length(pd);
+    vec2.normalize(pd, pd);
 
-    const result = ss(_v2_3, v2, ray, 1, p, pd, pl);
+    const result = ss(_v2_4, v2, ray, 1, p, pd, pl);
     if (result) {
-      intersects++;
+      if (pd[1] < 0) {
+        wn++;
+      } else if (pd[1] > 0) {
+        wn--;
+      }
     }
   });
 
-  return intersects % 2;
+  return wn;
 }
 
 module.exports = { ll, ss, contained, EPSILON };
-

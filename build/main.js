@@ -27993,26 +27993,30 @@ function ss(result, x0, d0, l0, x1, d1, l1) {
 }
 
 function contained(v2, polygon) {
-  // using crossing number method since we know all shapes will be convex
-  const ray = vec2.set(_v2_2, 1, 0);
-  let intersects = 0;
+  // Polygons must be ccw
+  const ray = vec2.set(_v2_1, 1, 0);
+  let wn = 0;
 
   polygon.forEach((p, i) => {
     const next = i === (polygon.length - 1) ? polygon[0] : polygon[i+1];
-    const pd = vec2.sub(_v2_4, next, p);
+    const pd = vec2.sub(_v2_2, next, p);
     const pl = vec2.length(pd);
+    vec2.normalize(pd, pd);
 
-    const result = ss(_v2_3, v2, ray, 1, p, pd, pl);
+    const result = ss(_v2_4, v2, ray, 1, p, pd, pl);
     if (result) {
-      intersects++;
+      if (pd[1] < 0) {
+        wn++;
+      } else if (pd[1] > 0) {
+        wn--;
+      }
     }
   });
 
-  return intersects % 2;
+  return wn;
 }
 
 module.exports = { ll, ss, contained, EPSILON };
-
 
 },{"gl-vec2":83,"lodash":171}],194:[function(require,module,exports){
 // from https://github.com/kokorigami/kokorigami/blob/master/lib/halfedges.js
@@ -28432,12 +28436,14 @@ function carveShape(shape) {
 }
 
 function carveRect(x, y, w, h) {
-  // find cycles encased in rectangle
+  // We add a bit of padding to full capture
+  // cycles on the edge.
+  const adj = 0.01;
   const rect = [
-    vec2.set(_v2_5, x, y),
-    vec2.set(_v2_6, x+w, y),
-    vec2.set(_v2_7, x+w, y+h),
-    vec2.set(_v2_8, x, y+h),
+    vec2.set(_v2_5, x-adj, y-adj),
+    vec2.set(_v2_6, x+w+adj, y-adj),
+    vec2.set(_v2_7, x+w+adj, y+h+adj),
+    vec2.set(_v2_8, x-adj, y+h+adj),
   ];
   return carveShape(rect);
 }
@@ -28510,7 +28516,7 @@ if (window.__DEV__) {
 }
 
 // Setup the hedges
-Hedges.gridify(7);
+Hedges.gridify(9);
 
 const _v2_0 = vec2.create();
 const _v2_1 = vec2.create();
@@ -28538,7 +28544,7 @@ const path_b = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
 const path_l = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
 const path_r = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
 
-const SQUARE_SIZE = Math.ceil(1/7 * 3);
+const SQUARE_SIZE = 1/7 * 2.5;
 const sq_center = Hedges.carveRect(
   0.5 - SQUARE_SIZE/2,
   0.5 - SQUARE_SIZE/2,
@@ -28547,7 +28553,17 @@ const sq_center = Hedges.carveRect(
 );
 
 const renderer = new Renderer(canvas);
-renderer.setupMap(Hedges.form(), {}, true);
+renderer.setupMap(
+  Hedges.form(),
+  {
+    ...path_t,
+    ...path_b,
+    ...path_l,
+    ...path_r,
+    ...sq_center,
+  },
+  __DEV__ && true
+);
 renderer.render();
 
 },{"./hedges":195,"./mapper":197,"./render":199,"gl-vec2":83}],197:[function(require,module,exports){

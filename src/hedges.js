@@ -181,12 +181,14 @@ function carveShape(shape) {
 }
 
 function carveRect(x, y, w, h) {
-  // find cycles encased in rectangle
+  // We add a bit of padding to full capture
+  // cycles on the edge.
+  const adj = 0.01;
   const rect = [
-    vec2.set(_v2_5, x, y),
-    vec2.set(_v2_6, x+w, y),
-    vec2.set(_v2_7, x+w, y+h),
-    vec2.set(_v2_8, x, y+h),
+    vec2.set(_v2_5, x-adj, y-adj),
+    vec2.set(_v2_6, x+w+adj, y-adj),
+    vec2.set(_v2_7, x+w+adj, y+h+adj),
+    vec2.set(_v2_8, x-adj, y+h+adj),
   ];
   return carveShape(rect);
 }

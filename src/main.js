@@ -16,7 +16,7 @@ if (window.__DEV__) {
 }
 
 // Setup the hedges
-Hedges.gridify(7);
+Hedges.gridify(9);
 
 const _v2_0 = vec2.create();
 const _v2_1 = vec2.create();
@@ -44,7 +44,7 @@ const path_b = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
 const path_l = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
 const path_r = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
 
-const SQUARE_SIZE = Math.ceil(1/7 * 3);
+const SQUARE_SIZE = 1/7 * 2.5;
 const sq_center = Hedges.carveRect(
   0.5 - SQUARE_SIZE/2,
   0.5 - SQUARE_SIZE/2,
@@ -53,5 +53,15 @@ const sq_center = Hedges.carveRect(
 );
 
 const renderer = new Renderer(canvas);
-renderer.setupMap(Hedges.form(), {}, true);
+renderer.setupMap(
+  Hedges.form(),
+  {
+    ...path_t,
+    ...path_b,
+    ...path_l,
+    ...path_r,
+    ...sq_center,
+  },
+  __DEV__ && true
+);
 renderer.render();
