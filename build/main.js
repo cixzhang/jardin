@@ -28279,7 +28279,6 @@ const naturals = [
   vec2.set(vec2.create(), 0, 1),
   vec2.set(vec2.create(), 1, 1)
 ];
-const shapes = [];
 let globalId = 0;
 
 // Traces the hedges for debugging and identification.
@@ -28371,6 +28370,14 @@ function splitWithSegment(v1, v2) {
   }
 }
 
+function splitShape(shape) {
+  shape.forEach((p, i) => {
+    const next = (i+1 === shape.length) ? shape[0]: shape[i+1];
+    splitWithSegment(p, next);
+    // TODO: deal with dangling segments?
+  });
+}
+
 function gridify(size=2) {
   const delta = 1/size;
   let x = 0;
@@ -28382,7 +28389,6 @@ function gridify(size=2) {
     vec2.set(_v2_5, x, 0);
     vec2.set(_v2_6, x, 1);
     splitWithSegment(_v2_5, _v2_6);
-    debugger;
     x += delta;
   }
 
@@ -28412,21 +28418,17 @@ function gridify(size=2) {
 
 function carveShape(shape) {
   const id = globalId++;
+  const cycles = {};
   halfedges.cycles.forEach((cycle, i) => {
-    if (!shapes[i]) {
-      shapes[i] = {};
-    }
-
-    const cycleShapes = shapes[i];
     const carved = _.every(cycle, h => {
       const natural = naturals[halfedges.src(h)];
       return contained(natural, shape);
     });
     if (carved) {
-      cycleShapes[id] = id;
+      cycles[i] = i;
     }
   });
-  return id;
+  return cycles;
 }
 
 function carveRect(x, y, w, h) {
@@ -28445,9 +28447,7 @@ function triangulate(points) {
   if (points.length <= 3) return [points];
   const triangles = [];
   for (var i = 1; i < points.length; i++) {
-    let v = vec3.create();
-    vec3.set(v, points[0], points[i-1], points[i]);
-    triangles.push(v);
+    triangles.push([points[0], points[i-1], points[i]]);
   }
   return triangles;
 }
@@ -28456,11 +28456,12 @@ function triangulate(points) {
 function form() {
   const vec2ToVec3 = (v2) => {
     const v3 = vec3.create();
-    vec3.set(v3, v2[0], 0, v2[1]);
+    vec3.set(v3, v2[0], 0.1, v2[1]);
     return v3;
   };
 
   const positions = [];
+  const cycles = [];
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
@@ -28471,19 +28472,21 @@ function form() {
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
         positions.push(...t);
+        cycles.push(...(t.map(_ => i)));
       });
     }
   );
-  return positions;
+  return {positions, cycles};
 }
 
 module.exports = {
   halfedges,
   naturals,
-  shapes,
   trace,
   form,
   gridify,
+  split: splitWithSegment,
+  splitShape,
   carveShape,
   carveRect,
 };
@@ -28493,6 +28496,8 @@ module.exports = {
 const Renderer = require('./render');
 const Mapper = require('./mapper');
 const Hedges = require('./hedges');
+
+const vec2 = require('gl-vec2');
 const canvas = document.getElementById('canvas');
 
 // Expose on the window during development
@@ -28505,51 +28510,47 @@ if (window.__DEV__) {
 }
 
 // Setup the hedges
-Hedges.gridify(15);
+Hedges.gridify(7);
 
-const PATH_WIDTH = 0.1;
-const PATH_T = Hedges.carveRect(0.5 - PATH_WIDTH/2,  0.5, PATH_WIDTH, 0.6);
-const PATH_B = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
-const PATH_L = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
-const PATH_R = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+const _v2_0 = vec2.create();
+const _v2_1 = vec2.create();
 
-// const SQUARE_SIZE = 0.15;
-// const SQ_CENTER = carveRect(
-//   0.5 - SQUARE_SIZE/2,
-//   0.5 - SQUARE_SIZE/2,
-//   SQUARE_SIZE,
-//   SQUARE_SIZE
-// );
-// const SQ_BL = carveRect(
-//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
-//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
-//   SQUARE_SIZE,
-//   SQUARE_SIZE,
-// );
-// const SQ_BR = carveRect(
-//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
-//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
-//   SQUARE_SIZE,
-//   SQUARE_SIZE,
-// );
-// const SQ_TL = carveRect(
-//   (0.5 - PATH_WIDTH/2)/2 - SQUARE_SIZE/2,
-//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
-//   SQUARE_SIZE,
-//   SQUARE_SIZE,
-// );
-// const SQ_TR = carveRect(
-//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
-//   1 - (0.5 - PATH_WIDTH/2)/2 + SQUARE_SIZE/2,
-//   SQUARE_SIZE,
-//   SQUARE_SIZE,
-// );
+const PATH_WIDTH = 0.05;
+// Split out the path
+Hedges.split(
+  vec2.set(_v2_0, -0.1, 0.5 - PATH_WIDTH/2),
+  vec2.set(_v2_1,  1.1, 0.5 - PATH_WIDTH/2),
+);
+Hedges.split(
+  vec2.set(_v2_0,  1.1, 0.5 + PATH_WIDTH/2),
+  vec2.set(_v2_1, -0.1, 0.5 + PATH_WIDTH/2),
+);
+Hedges.split(
+  vec2.set(_v2_0, 0.5 + PATH_WIDTH/2, -0.1),
+  vec2.set(_v2_1, 0.5 + PATH_WIDTH/2,  1.1),
+);
+Hedges.split(
+  vec2.set(_v2_0, 0.5 - PATH_WIDTH/2,  1.1),
+  vec2.set(_v2_1, 0.5 - PATH_WIDTH/2, -0.1),
+);
+const path_t = Hedges.carveRect(0.5 - PATH_WIDTH/2,  0.5, PATH_WIDTH, 0.6);
+const path_b = Hedges.carveRect(0.5 - PATH_WIDTH/2, -0.1, PATH_WIDTH, 0.6);
+const path_l = Hedges.carveRect(-0.1, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+const path_r = Hedges.carveRect( 0.5, 0.5 - PATH_WIDTH/2, 0.6, PATH_WIDTH);
+
+const SQUARE_SIZE = Math.ceil(1/7 * 3);
+const sq_center = Hedges.carveRect(
+  0.5 - SQUARE_SIZE/2,
+  0.5 - SQUARE_SIZE/2,
+  SQUARE_SIZE,
+  SQUARE_SIZE
+);
 
 const renderer = new Renderer(canvas);
-renderer.setupMap(Hedges.form(), true);
+renderer.setupMap(Hedges.form(), {}, true);
 renderer.render();
 
-},{"./hedges":195,"./mapper":197,"./render":199}],197:[function(require,module,exports){
+},{"./hedges":195,"./mapper":197,"./render":199,"gl-vec2":83}],197:[function(require,module,exports){
 
 const random = require('./random');
 
@@ -28686,13 +28687,16 @@ const vec3 = require('gl-vec3');
 const vs = `
   attribute vec3 position;
   attribute vec3 color;
+  attribute float hidden;
   uniform mat4 projection, view;
   varying vec3 v_position;
   varying vec3 v_color;
+  varying float v_hidden;
   void main() {
     gl_Position = projection*view*vec4(position, 1.0);
     v_position = gl_Position.xyz;
     v_color = color;
+    v_hidden = hidden;
   }
 `;
 
@@ -28700,8 +28704,9 @@ const fs = `
   precision mediump float;
   varying vec3 v_position;
   varying vec3 v_color;
+  varying float v_hidden;
   void main() {
-    gl_FragColor = vec4(v_color, 1.0);
+    gl_FragColor = vec4(v_color, 1.0 - v_hidden);
   }
 `;
 
@@ -28715,7 +28720,7 @@ class Renderer {
     });
     this.eye = vec3.create();
     vec3.set(this.eye, 0.5, 0, 0.5);
-    this.mapgeo = null;
+    this.mapgeo = createGeometry(this.gl);
 
     this.colorHedge = vec3.create();
     vec3.set(this.colorHedge, 0.60, 0.69, 0.23);
@@ -28732,20 +28737,21 @@ class Renderer {
     this.gl.enable(this.gl.DEPTH_TEST);
   }
 
-  setupMap(map, debug) {
+  setupMap(map, hiddenCycles, debug) {
     const colors = [];
-    map.forEach((_, i) => {
+    const hidden = [];
+    map.positions.forEach((_, i) => {
       const color = debug ?
         this.colorsDebug[Math.floor(i/3) % 6] :
         this.colorHedge;
       colors.push(color);
+      hidden.push(map.cycles[i] in hiddenCycles ? 1 : 0);
     });
 
-    const geo = createGeometry(this.gl)
-      .attr('position', map)
-      .attr('color', colors);
-
-    this.mapgeo = geo;
+    this.mapgeo
+      .attr('position', map.positions)
+      .attr('color', colors)
+      .attr('hidden', hidden, {size: 1});
   }
 
   resize() {

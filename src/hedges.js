@@ -28,7 +28,6 @@ const naturals = [
   vec2.set(vec2.create(), 0, 1),
   vec2.set(vec2.create(), 1, 1)
 ];
-const shapes = [];
 let globalId = 0;
 
 // Traces the hedges for debugging and identification.
@@ -120,6 +119,14 @@ function splitWithSegment(v1, v2) {
   }
 }
 
+function splitShape(shape) {
+  shape.forEach((p, i) => {
+    const next = (i+1 === shape.length) ? shape[0]: shape[i+1];
+    splitWithSegment(p, next);
+    // TODO: deal with dangling segments?
+  });
+}
+
 function gridify(size=2) {
   const delta = 1/size;
   let x = 0;
@@ -131,7 +138,6 @@ function gridify(size=2) {
     vec2.set(_v2_5, x, 0);
     vec2.set(_v2_6, x, 1);
     splitWithSegment(_v2_5, _v2_6);
-    debugger;
     x += delta;
   }
 
@@ -161,21 +167,17 @@ function gridify(size=2) {
 
 function carveShape(shape) {
   const id = globalId++;
+  const cycles = {};
   halfedges.cycles.forEach((cycle, i) => {
-    if (!shapes[i]) {
-      shapes[i] = {};
-    }
-
-    const cycleShapes = shapes[i];
     const carved = _.every(cycle, h => {
       const natural = naturals[halfedges.src(h)];
       return contained(natural, shape);
     });
     if (carved) {
-      cycleShapes[id] = id;
+      cycles[i] = i;
     }
   });
-  return id;
+  return cycles;
 }
 
 function carveRect(x, y, w, h) {
@@ -194,9 +196,7 @@ function triangulate(points) {
   if (points.length <= 3) return [points];
   const triangles = [];
   for (var i = 1; i < points.length; i++) {
-    let v = vec3.create();
-    vec3.set(v, points[0], points[i-1], points[i]);
-    triangles.push(v);
+    triangles.push([points[0], points[i-1], points[i]]);
   }
   return triangles;
 }
@@ -205,11 +205,12 @@ function triangulate(points) {
 function form() {
   const vec2ToVec3 = (v2) => {
     const v3 = vec3.create();
-    vec3.set(v3, v2[0], 0, v2[1]);
+    vec3.set(v3, v2[0], 0.1, v2[1]);
     return v3;
   };
 
   const positions = [];
+  const cycles = [];
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
@@ -220,19 +221,21 @@ function form() {
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
         positions.push(...t);
+        cycles.push(...(t.map(_ => i)));
       });
     }
   );
-  return positions;
+  return {positions, cycles};
 }
 
 module.exports = {
   halfedges,
   naturals,
-  shapes,
   trace,
   form,
   gridify,
+  split: splitWithSegment,
+  splitShape,
   carveShape,
   carveRect,
 };

@@ -8,13 +8,16 @@ const vec3 = require('gl-vec3');
 const vs = `
   attribute vec3 position;
   attribute vec3 color;
+  attribute float hidden;
   uniform mat4 projection, view;
   varying vec3 v_position;
   varying vec3 v_color;
+  varying float v_hidden;
   void main() {
     gl_Position = projection*view*vec4(position, 1.0);
     v_position = gl_Position.xyz;
     v_color = color;
+    v_hidden = hidden;
   }
 `;
 
@@ -22,8 +25,9 @@ const fs = `
   precision mediump float;
   varying vec3 v_position;
   varying vec3 v_color;
+  varying float v_hidden;
   void main() {
-    gl_FragColor = vec4(v_color, 1.0);
+    gl_FragColor = vec4(v_color, 1.0 - v_hidden);
   }
 `;
 
@@ -37,7 +41,7 @@ class Renderer {
     });
     this.eye = vec3.create();
     vec3.set(this.eye, 0.5, 0, 0.5);
-    this.mapgeo = null;
+    this.mapgeo = createGeometry(this.gl);
 
     this.colorHedge = vec3.create();
     vec3.set(this.colorHedge, 0.60, 0.69, 0.23);
@@ -54,20 +58,21 @@ class Renderer {
     this.gl.enable(this.gl.DEPTH_TEST);
   }
 
-  setupMap(map, debug) {
+  setupMap(map, hiddenCycles, debug) {
     const colors = [];
-    map.forEach((_, i) => {
+    const hidden = [];
+    map.positions.forEach((_, i) => {
       const color = debug ?
         this.colorsDebug[Math.floor(i/3) % 6] :
         this.colorHedge;
       colors.push(color);
+      hidden.push(map.cycles[i] in hiddenCycles ? 1 : 0);
     });
 
-    const geo = createGeometry(this.gl)
-      .attr('position', map)
-      .attr('color', colors);
-
-    this.mapgeo = geo;
+    this.mapgeo
+      .attr('position', map.positions)
+      .attr('color', colors)
+      .attr('hidden', hidden, {size: 1});
   }
 
   resize() {
