@@ -3,7 +3,7 @@ const _ = require('lodash');
 const vec2 = require('gl-vec2');
 const vec3 = require('gl-vec3');
 const Halfedges = require('./halfedges');
-const {ss, contained, EPSILON} = require('./geometry');
+const {ss, contained, v2ToV3, EPSILON} = require('./geometry');
 const {AXES} = require('./mapper');
 
 // vec2s for splitByLerp
@@ -32,6 +32,11 @@ const naturals = [
   vec2.set(vec2.create(), 0, 1),
   vec2.set(vec2.create(), 1, 1)
 ];
+naturals.fromCycle = function fromCycle(cycle) {
+  return cycle.map(h => {
+    return naturals[halfedges.src(h)];
+  });
+}
 let globalId = 0;
 
 // Traces the hedges for debugging and identification.
@@ -184,31 +189,40 @@ function carveShape(shape) {
   return cycles;
 }
 
-function carveRect(x, y, w, h) {
+function carveRect(cx, cy, w, h) {
+  if (window.__DEV__) {
+    console.log('Carving rectangle:', cx, cy, w, h);
+  }
   // We add a bit of padding to full capture
   // cycles on the edge.
   const adj = 0.01;
   const rect = [
-    vec2.set(_v2_5, x-adj, y-adj),
-    vec2.set(_v2_6, x+w+adj, y-adj),
-    vec2.set(_v2_7, x+w+adj, y+h+adj),
-    vec2.set(_v2_8, x-adj, y+h+adj),
+    vec2.set(_v2_5, cx-w/2-adj, cy-h/2-adj),
+    vec2.set(_v2_6, cx+w/2+adj, cy-h/2-adj),
+    vec2.set(_v2_7, cx+w/2+adj, cy+h/2+adj),
+    vec2.set(_v2_8, cx-w/2-adj, cy+h/2+adj),
   ];
   return carveShape(rect);
 }
 
-function carveDiamond(bx, by, w, h) {
+function carveDiamond(cx, cy, w, h) {
+  if (window.__DEV__) {
+    console.log('Carving diamond:', cx, cy, w, h);
+  }
   const adj = 0.01;
   const diamond = [
-    vec2.set(_v2_5, bx, by-adj),
-    vec2.set(_v2_6, bx+w/2+adj, by+(h/2)),
-    vec2.set(_v2_7, bx, by+h+adj),
-    vec2.set(_v2_8, bx-w/2-adj, by+(h/2)),
+    vec2.set(_v2_5, cx, cy-h/2-adj),
+    vec2.set(_v2_6, cx+w/2+adj, cy),
+    vec2.set(_v2_7, cx, cy+h/2+adj),
+    vec2.set(_v2_8, cx-w/2-adj, cy),
   ];
   return carveShape(diamond);
 }
 
 function carveCircle(cx, cy, r) {
+  if (window.__DEV__) {
+    console.log('Carving cicle:', cx, cy, r);
+  }
   const radj = r + 0.01;
   const angle = 2 * Math.PI / 8;
 
@@ -237,12 +251,6 @@ function triangulate(points) {
 
 // Computes positions and cells for rendering
 function form() {
-  const vec2ToVec3 = (v2) => {
-    const v3 = vec3.create();
-    vec3.set(v3, v2[0], 0.1, v2[1]);
-    return v3;
-  };
-
   const positions = [];
   const cycles = [];
   halfedges.cycles.forEach(
@@ -250,7 +258,7 @@ function form() {
       if (i === 0) return; // skip the outside
       const srcs = cycle.map(h => {
         const n = naturals[halfedges.src(h)];
-        return vec2ToVec3(n);
+        return v2ToV3(vec3.create(), n, 0.1, true);
       });
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {

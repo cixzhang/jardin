@@ -2,6 +2,7 @@
 
 const _ = require('lodash');
 const vec2 = require('gl-vec2');
+const vec3 = require('gl-vec3');
 
 const EPSILON = 0.000001;
 
@@ -96,4 +97,14 @@ function contained(v2, polygon) {
   return wn;
 }
 
-module.exports = { ll, ss, contained, EPSILON };
+function v2ToV3(result, v2, z, swap) {
+  const v3 = result || vec3.create();
+  if (swap) {
+    vec3.set(v3, v2[0], z, v2[1]);
+  } else {
+    vec3.set(v3, v2[0], v2[1], z);
+  }
+  return v3;
+}
+
+module.exports = { ll, ss, contained, v2ToV3, EPSILON };
