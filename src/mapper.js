@@ -126,27 +126,18 @@ function generate(x, y) {
   //   ));
   // }
 
-  // Random cycle carving
-  const numCarving = random.randInt(20, 50);
-  const cycles = random.sampleMany(ELIGIBLE_CYCLE_KEYS, numCarving);
-  cycles.forEach(cycle => {
-    geometry[cycle] = cycle;
-  });
-
-  // Axis reflections
-  const borrowed = [];
-  console.log('Reflecting over ', axis);
-  cycles.forEach(cycle => {
-    const naturals = Hedges.naturals.fromCycle(cycle);
-    const reflection = naturals.map(n => {
-      const v2 = vec2Borrow();
-      const reflected = vec2.transformMat3(v2, n, AXES[axis]);
-      borrowed.push(v2);
-      return reflected;
-    });
-    console.log(naturals, reflection);
-  });
-  borrowed.forEach(vec2Return);
+  // Random cycle carving v2: using mirroring points
+  const numCarving = random.randInt(40, 100);
+  for (let i = 0; i < numCarving; i++) {
+    const v2 = vec2Borrow();
+    const v2_m = vec2Borrow();
+    vec2.set(v2, random.randInRangeSet(RANGES), random.randInRangeSet(RANGES));
+    vec2.transformMat3(v2_m, v2, AXES[axis]);
+    Object.assign(geometry, Hedges.find(v2));
+    Object.assign(geometry, Hedges.find(v2_m));
+    vec2Return(v2);
+    vec2Return(v2_m);
+  }
 
   const upMap = map[getMapKey(x, y-1)];
   const downMap = map[getMapKey(x, y+1)];

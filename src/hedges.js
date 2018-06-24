@@ -15,11 +15,6 @@ const naturals = [
   vec2.set(vec2.create(), 0, 1),
   vec2.set(vec2.create(), 1, 1)
 ];
-naturals.fromCycle = function fromCycle(cycle) {
-  return cycle.map(h => {
-    return naturals[halfedges.src(h)];
-  });
-}
 let globalId = 0;
 
 // Traces the hedges for debugging and identification.
@@ -163,6 +158,23 @@ function gridify(size=2) {
   vec2Return(_v2_6);
 }
 
+function cycleToPoints(cycle) {
+  return cycle.map(h => {
+    return naturals[halfedges.src(h)];
+  });
+}
+
+function find(v2) {
+  const cycles = {};
+  halfedges.cycles.forEach((cycle, i) => {
+    const polygon = cycleToPoints(cycle);
+    if (contained(v2, polygon)) {
+      cycles[i] = i;
+    }
+  });
+  return cycles;
+}
+
 function carveShape(shape) {
   const id = globalId++;
   const cycles = {};
@@ -302,6 +314,8 @@ module.exports = {
   form,
   gridify,
   split: splitWithSegment,
+  cycleToPoints,
+  find,
   carveShape,
   carveRect,
   carveDiamond,

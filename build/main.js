@@ -28873,11 +28873,6 @@ const naturals = [
   vec2.set(vec2.create(), 0, 1),
   vec2.set(vec2.create(), 1, 1)
 ];
-naturals.fromCycle = function fromCycle(cycle) {
-  return cycle.map(h => {
-    return naturals[halfedges.src(h)];
-  });
-}
 let globalId = 0;
 
 // Traces the hedges for debugging and identification.
@@ -29021,6 +29016,23 @@ function gridify(size=2) {
   vec2Return(_v2_6);
 }
 
+function cycleToPoints(cycle) {
+  return cycle.map(h => {
+    return naturals[halfedges.src(h)];
+  });
+}
+
+function find(v2) {
+  const cycles = {};
+  halfedges.cycles.forEach((cycle, i) => {
+    const polygon = cycleToPoints(cycle);
+    if (contained(v2, polygon)) {
+      cycles[i] = i;
+    }
+  });
+  return cycles;
+}
+
 function carveShape(shape) {
   const id = globalId++;
   const cycles = {};
@@ -29160,6 +29172,8 @@ module.exports = {
   form,
   gridify,
   split: splitWithSegment,
+  cycleToPoints,
+  find,
   carveShape,
   carveRect,
   carveDiamond,
@@ -29189,7 +29203,7 @@ const renderer = new Renderer(canvas);
 renderer.setupMap(
   Hedges.form(),
   garden.geometry,
-  __DEV__ && true
+  __DEV__ && false
 );
 renderer.render();
 
@@ -29322,27 +29336,18 @@ function generate(x, y) {
   //   ));
   // }
 
-  // Random cycle carving
-  const numCarving = random.randInt(20, 50);
-  const cycles = random.sampleMany(ELIGIBLE_CYCLE_KEYS, numCarving);
-  cycles.forEach(cycle => {
-    geometry[cycle] = cycle;
-  });
-
-  // Axis reflections
-  const borrowed = [];
-  console.log('Reflecting over ', axis);
-  cycles.forEach(cycle => {
-    const naturals = Hedges.naturals.fromCycle(cycle);
-    const reflection = naturals.map(n => {
-      const v2 = vec2Borrow();
-      const reflected = vec2.transformMat3(v2, n, AXES[axis]);
-      borrowed.push(v2);
-      return reflected;
-    });
-    console.log(naturals, reflection);
-  });
-  borrowed.forEach(vec2Return);
+  // Random cycle carving v2: using mirroring points
+  const numCarving = random.randInt(40, 100);
+  for (let i = 0; i < numCarving; i++) {
+    const v2 = vec2Borrow();
+    const v2_m = vec2Borrow();
+    vec2.set(v2, random.randInRangeSet(RANGES), random.randInRangeSet(RANGES));
+    vec2.transformMat3(v2_m, v2, AXES[axis]);
+    Object.assign(geometry, Hedges.find(v2));
+    Object.assign(geometry, Hedges.find(v2_m));
+    vec2Return(v2);
+    vec2Return(v2_m);
+  }
 
   const upMap = map[getMapKey(x, y-1)];
   const downMap = map[getMapKey(x, y+1)];
@@ -29422,7 +29427,7 @@ function sampleMany(list, num) {
   const result = [];
   for (let i = 0; i < num; i++) {
     const item = randInt(0, clone.length);
-    result.push(clone.splice(item, 1));
+    result.push(clone.splice(item, 1)[0]);
   }
   return result;
 }

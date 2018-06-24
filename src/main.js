@@ -20,6 +20,6 @@ const renderer = new Renderer(canvas);
 renderer.setupMap(
   Hedges.form(),
   garden.geometry,
-  __DEV__ && true
+  __DEV__ && false
 );
 renderer.render();

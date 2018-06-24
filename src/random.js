@@ -39,7 +39,7 @@ function sampleMany(list, num) {
   const result = [];
   for (let i = 0; i < num; i++) {
     const item = randInt(0, clone.length);
-    result.push(clone.splice(item, 1));
+    result.push(clone.splice(item, 1)[0]);
   }
   return result;
 }
