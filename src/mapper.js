@@ -87,8 +87,8 @@ const CENTERSHAPES = {
 const CENTERSHAPE_KEYS = Object.keys(CENTERSHAPES);
 
 const RANGES = [
-  [PATH_WIDTH, 0.5 - PATH_WIDTH],
-  [0.5 + PATH_WIDTH, 1 - PATH_WIDTH],
+  [PATH_WIDTH*2, 0.5 - PATH_WIDTH],
+  [0.5 + PATH_WIDTH, 1 - PATH_WIDTH*2],
 ];
 
 const ELIGIBLE_CYCLES = {
@@ -110,21 +110,20 @@ function generate(x, y) {
   const geometry = {};
   const axis = random.sample(AXIS_KEYS);
 
-  // // Random shape carving
-  // const shapes = [];
-  // const numShapes = random.randInt(0, 2);
-
-  // for (let i = 0; i < numShapes; i++) {
-  //   let size = random.randInRange(0.15, 0.3);
-  //   const shape = random.sample(SHAPE_KEYS);
-  //   shapes.push(shape);
-  //   Object.assign(geometry, SHAPES[shape](
-  //     random.randInRangeSet(RANGES),
-  //     random.randInRangeSet(RANGES),
-  //     size,
-  //     size,
-  //   ));
-  // }
+  // Random shape carving
+  const numShapes = random.randInt(0, 2);
+  for (let i = 0; i < numShapes; i++) {
+    let size = random.randInRange(0.1, 0.15);
+    const shape = random.sample(SHAPE_KEYS);
+    const v2 = vec2Borrow();
+    const v2_m = vec2Borrow();
+    vec2.set(v2, random.randInRangeSet(RANGES), random.randInRangeSet(RANGES));
+    vec2.transformMat3(v2_m, v2, AXES[axis]);
+    Object.assign(geometry, SHAPES[shape](v2[0],v2[1],size,size));
+    Object.assign(geometry, SHAPES[shape](v2_m[0],v2_m[1],size,size));
+    vec2Return(v2);
+    vec2Return(v2_m);
+  }
 
   // Random cycle carving v2: using mirroring points
   const numCarving = random.randInt(40, 100);
