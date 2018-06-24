@@ -29218,7 +29218,7 @@ const vec2 = require('gl-vec2');
 const mat3 = require('gl-mat3');
 
 const map = {};
-const MAX = 20; // no more than 20 maps
+const MAX = 10;
 
 // Setup the hedges
 Hedges.gridify(16);
