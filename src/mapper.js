@@ -8,6 +8,7 @@ const vec2 = require('gl-vec2');
 const mat3 = require('gl-mat3');
 
 const map = {};
+const MAX = 20; // no more than 20 maps
 
 // Setup the hedges
 Hedges.gridify(16);
@@ -163,9 +164,12 @@ function generate(x, y) {
     centershape,
     paths,
     geometry,
+    jungle: _.size(map) >= MAX,
   };
 
-  map[mapKey] = mapProps;
+  if (!mapProps.jungle) {
+    map[mapKey] = mapProps;
+  }
   return mapProps;
 };
 
