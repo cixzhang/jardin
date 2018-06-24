@@ -31,17 +31,44 @@ const fs = `
   }
 `;
 
+const cvs = `
+  attribute vec3 position;
+  attribute vec2 texcoord;
+  uniform mat4 projection, view;
+  varying vec2 v_texcoord;
+
+  void main() {
+    gl_Position = projection*view*vec4(position, 1.0);
+    // Pass the texcoord to the fragment shader.
+    v_texcoord = texcoord;
+  }
+`;
+
+const cfs = `
+  precision mediump float;
+  varying vec2 v_texcoord;
+  uniform sampler2D texture;
+  void main() {
+    gl_FragColor = texture2D(texture, v_texcoord);
+  }
+`;
+
+const gardener = require('../assets/gardener');
+
 class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.gl = canvas.getContext('webgl');
-    this.shader = createShader(this.gl, vs, fs);
+    this.mapShader = createShader(this.gl, vs, fs);
+    this.characterShader = createShader(this.gl, cvs, cfs);
+
     this.camera = createCamera({
       position: [0.5, 2, 0.25]
     });
     this.eye = vec3.create();
     vec3.set(this.eye, 0.5, 0, 0.5);
     this.mapgeo = createGeometry(this.gl);
+    this.chargeo = createGeometry(this.gl);
 
     this.colorHedge = vec3.create();
     vec3.set(this.colorHedge, 0.60, 0.69, 0.23);
@@ -99,11 +126,14 @@ class Renderer {
     if (!this.mapgeo) return;
 
     const mapgeo = this.mapgeo;
-    mapgeo.bind(this.shader);
-    this.shader.uniforms.projection = this.camera.projection;
-    this.shader.uniforms.view = this.camera.view;
+    mapgeo.bind(this.mapShader);
+    this.mapShader.uniforms.projection = this.camera.projection;
+    this.mapShader.uniforms.view = this.camera.view;
     mapgeo.draw();
     mapgeo.unbind();
+
+    // Render sprite
+
   }
 }
 
