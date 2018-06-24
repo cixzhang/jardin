@@ -4,6 +4,7 @@ const Hedges = require('./hedges');
 
 const {vec2Borrow, vec2Return} = require('./bank');
 
+const _ = require('lodash');
 const vec2 = require('gl-vec2');
 const mat3 = require('gl-mat3');
 
@@ -91,14 +92,6 @@ const RANGES = [
   [PATH_WIDTH*2, 0.5 - PATH_WIDTH],
   [0.5 + PATH_WIDTH, 1 - PATH_WIDTH*2],
 ];
-
-const ELIGIBLE_CYCLES = {
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2, (1 - PATH_WIDTH)/2, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2, (1 - PATH_WIDTH)/2 + 0.5, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2 + 0.5, (1 - PATH_WIDTH)/2 + 0.5, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2 + 0.5, (1 - PATH_WIDTH)/2, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-}
-const ELIGIBLE_CYCLE_KEYS = Object.keys(ELIGIBLE_CYCLES);
 
 function getMapKey(x, y) {
   return `${x}.${y}`;

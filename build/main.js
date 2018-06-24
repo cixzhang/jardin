@@ -29022,12 +29022,25 @@ function cycleToPoints(cycle) {
   });
 }
 
+function getCycleId(cycle) {
+  // We'll trace cycles by the first halfedge in it
+  const trace = cycle[0];
+  return trace;
+}
+
+function recordCycle(record, cycle) {
+  record = record || {};
+  const trace = getCycleId(cycle)
+  record[trace] = trace;
+  return record;
+}
+
 function find(v2) {
   const cycles = {};
   halfedges.cycles.forEach((cycle, i) => {
     const polygon = cycleToPoints(cycle);
     if (contained(v2, polygon)) {
-      cycles[i] = i;
+      recordCycle(cycles, cycle);
     }
   });
   return cycles;
@@ -29042,7 +29055,7 @@ function carveShape(shape) {
       return contained(natural, shape);
     });
     if (carved) {
-      cycles[i] = i;
+      recordCycle(cycles, cycle);
     }
   });
   return cycles;
@@ -29151,14 +29164,16 @@ function form() {
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
+
+      const trace = getCycleId(cycle);
       const srcs = cycle.map(h => {
         const n = naturals[halfedges.src(h)];
         return v2ToV3(vec3.create(), n, 0.1, true);
       });
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
-        positions.push(...t);
-        cycles.push(...(t.map(_ => i)));
+        positions.push.apply(positions, t);
+        cycles.push.apply(cycles, t.map(_ => trace));
       });
     }
   );
@@ -29214,6 +29229,7 @@ const Hedges = require('./hedges');
 
 const {vec2Borrow, vec2Return} = require('./bank');
 
+const _ = require('lodash');
 const vec2 = require('gl-vec2');
 const mat3 = require('gl-mat3');
 
@@ -29302,14 +29318,6 @@ const RANGES = [
   [0.5 + PATH_WIDTH, 1 - PATH_WIDTH*2],
 ];
 
-const ELIGIBLE_CYCLES = {
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2, (1 - PATH_WIDTH)/2, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2, (1 - PATH_WIDTH)/2 + 0.5, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2 + 0.5, (1 - PATH_WIDTH)/2 + 0.5, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-  ...Hedges.carveRect((1 - PATH_WIDTH)/2 + 0.5, (1 - PATH_WIDTH)/2, 0.5 - PATH_WIDTH, 0.5 - PATH_WIDTH),
-}
-const ELIGIBLE_CYCLE_KEYS = Object.keys(ELIGIBLE_CYCLES);
-
 function getMapKey(x, y) {
   return `${x}.${y}`;
 }
@@ -29388,7 +29396,7 @@ module.exports = {
   generate,
 };
 
-},{"./bank":212,"./hedges":215,"./random":218,"gl-mat3":34,"gl-vec2":102}],218:[function(require,module,exports){
+},{"./bank":212,"./hedges":215,"./random":218,"gl-mat3":34,"gl-vec2":102,"lodash":190}],218:[function(require,module,exports){
 
 const MersenneTwister = require('mersenne-twister');
 

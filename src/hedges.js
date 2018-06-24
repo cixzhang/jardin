@@ -164,12 +164,25 @@ function cycleToPoints(cycle) {
   });
 }
 
+function getCycleId(cycle) {
+  // We'll trace cycles by the first halfedge in it
+  const trace = cycle[0];
+  return trace;
+}
+
+function recordCycle(record, cycle) {
+  record = record || {};
+  const trace = getCycleId(cycle)
+  record[trace] = trace;
+  return record;
+}
+
 function find(v2) {
   const cycles = {};
   halfedges.cycles.forEach((cycle, i) => {
     const polygon = cycleToPoints(cycle);
     if (contained(v2, polygon)) {
-      cycles[i] = i;
+      recordCycle(cycles, cycle);
     }
   });
   return cycles;
@@ -184,7 +197,7 @@ function carveShape(shape) {
       return contained(natural, shape);
     });
     if (carved) {
-      cycles[i] = i;
+      recordCycle(cycles, cycle);
     }
   });
   return cycles;
@@ -293,14 +306,16 @@ function form() {
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
+
+      const trace = getCycleId(cycle);
       const srcs = cycle.map(h => {
         const n = naturals[halfedges.src(h)];
         return v2ToV3(vec3.create(), n, 0.1, true);
       });
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
-        positions.push(...t);
-        cycles.push(...(t.map(_ => i)));
+        positions.push.apply(positions, t);
+        cycles.push.apply(cycles, t.map(_ => trace));
       });
     }
   );
