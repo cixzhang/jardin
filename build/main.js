@@ -28488,6 +28488,28 @@ function weakMap() {
 }
 
 },{"./create-store.js":209}],212:[function(require,module,exports){
+// Like a central bank for vec2
+
+const vec2 = require('gl-vec2');
+const vec2s = [];
+
+function vec2Borrow() {
+  if (!vec2s.length) {
+    vec2s.push(vec2.create());
+  }
+  return vec2s.pop();
+}
+
+function vec2Return(vec2) {
+  vec2s.push(vec2);
+}
+
+module.exports = {
+  vec2Borrow,
+  vec2Return,
+};
+
+},{"gl-vec2":102}],213:[function(require,module,exports){
 // from https://github.com/kokorigami/kokorigami/blob/master/lib/hits2.js
 
 const _ = require('lodash');
@@ -28599,7 +28621,7 @@ function v2ToV3(result, v2, z, swap) {
 
 module.exports = { ll, ss, contained, v2ToV3, EPSILON };
 
-},{"gl-vec2":102,"gl-vec3":147,"lodash":190}],213:[function(require,module,exports){
+},{"gl-vec2":102,"gl-vec3":147,"lodash":190}],214:[function(require,module,exports){
 // from https://github.com/kokorigami/kokorigami/blob/master/lib/halfedges.js
 
 let _ = require('lodash');
@@ -28833,33 +28855,16 @@ class Halfedges {
 module.exports = Halfedges;
 
 
-},{"lodash":190}],214:[function(require,module,exports){
+},{"lodash":190}],215:[function(require,module,exports){
 
 const _ = require('lodash');
 const vec2 = require('gl-vec2');
 const vec3 = require('gl-vec3');
 const Halfedges = require('./halfedges');
+
+const {vec2Borrow, vec2Return} = require('./bank');
 const {ss, contained, v2ToV3, EPSILON} = require('./geometry');
 const {AXES} = require('./mapper');
-
-// vec2s for splitByLerp
-const _v2_0 = vec2.create();
-const _v2_1 = vec2.create();
-
-// vec2s for splitWithSegment
-const _v2_2 = vec2.create();
-const _v2_3 = vec2.create();
-const _v2_4 = vec2.create();
-
-// vec2s for carveShape
-const _v2_5 = vec2.create();
-const _v2_6 = vec2.create();
-const _v2_7 = vec2.create();
-const _v2_8 = vec2.create();
-const _v2_9 = vec2.create();
-const _v2_10 = vec2.create();
-const _v2_11 = vec2.create();
-const _v2_12 = vec2.create();
 
 const halfedges = Halfedges.makeRing(4);
 const naturals = [
@@ -28921,7 +28926,11 @@ function splitByLerp(halfedge, amt) {
 }
 
 function splitWithSegment(v1, v2) {
-  const vd = vec2.sub(_v2_2, v2, v1);
+  const _v2_0 = vec2Borrow();
+  const _v2_1 = vec2Borrow();
+  const _v2_2 = vec2Borrow();
+
+  const vd = vec2.sub(_v2_0, v2, v1);
   const vl = vec2.length(vd);
   vec2.normalize(vd, vd);
 
@@ -28934,13 +28943,13 @@ function splitWithSegment(v1, v2) {
 
     const p1 = naturals[u];
     const p2 = naturals[v];
-    const pd = vec2.sub(_v2_3, p2, p1);
+    const pd = vec2.sub(_v2_1, p2, p1);
     const pl = vec2.length(pd);
     vec2.normalize(pd, pd);
 
     // Check if split vector and halfedge completely overlap.
     if (vec2.dot(vd, pd) > 1 - EPSILON) continue;
-    const hits = ss(_v2_4, v1, vd, vl, p1, pd, pl);
+    const hits = ss(_v2_2, v1, vd, vl, p1, pd, pl);
     if (hits == null) continue;
 
     const overlap = hits[1]/pl;
@@ -28962,17 +28971,16 @@ function splitWithSegment(v1, v2) {
   for (let i = 1; i < ordered.length; i++) {
     connectVertices(ordered[i], ordered[i-1]);
   }
-}
 
-function splitShape(shape) {
-  shape.forEach((p, i) => {
-    const next = (i+1 === shape.length) ? shape[0]: shape[i+1];
-    splitWithSegment(p, next);
-    // TODO: deal with dangling segments?
-  });
+  vec2Return(_v2_0);
+  vec2Return(_v2_1);
+  vec2Return(_v2_2);
 }
 
 function gridify(size=2) {
+  const _v2_5 = vec2Borrow();
+  const _v2_6 = vec2Borrow();
+
   const delta = 1/size;
   let x = 0;
   let y = 0;
@@ -29008,6 +29016,9 @@ function gridify(size=2) {
     splitWithSegment(_v2_5, _v2_6);
     b += delta * 2;
   }
+
+  vec2Return(_v2_5);
+  vec2Return(_v2_6);
 }
 
 function carveShape(shape) {
@@ -29029,6 +29040,11 @@ function carveRect(cx, cy, w, h) {
   if (window.__DEV__) {
     console.log('Carving rectangle:', cx, cy, w, h);
   }
+
+  const _v2_5 = vec2Borrow();
+  const _v2_6 = vec2Borrow();
+  const _v2_7 = vec2Borrow();
+  const _v2_8 = vec2Borrow();
   // We add a bit of padding to full capture
   // cycles on the edge.
   const adj = 0.01;
@@ -29038,6 +29054,11 @@ function carveRect(cx, cy, w, h) {
     vec2.set(_v2_7, cx+w/2+adj, cy+h/2+adj),
     vec2.set(_v2_8, cx-w/2-adj, cy+h/2+adj),
   ];
+
+  vec2Return(_v2_5);
+  vec2Return(_v2_6);
+  vec2Return(_v2_7);
+  vec2Return(_v2_8);
   return carveShape(rect);
 }
 
@@ -29045,6 +29066,11 @@ function carveDiamond(cx, cy, w, h) {
   if (window.__DEV__) {
     console.log('Carving diamond:', cx, cy, w, h);
   }
+
+  const _v2_5 = vec2Borrow();
+  const _v2_6 = vec2Borrow();
+  const _v2_7 = vec2Borrow();
+  const _v2_8 = vec2Borrow();
   const adj = 0.01;
   const diamond = [
     vec2.set(_v2_5, cx, cy-h/2-adj),
@@ -29052,6 +29078,10 @@ function carveDiamond(cx, cy, w, h) {
     vec2.set(_v2_7, cx, cy+h/2+adj),
     vec2.set(_v2_8, cx-w/2-adj, cy),
   ];
+  vec2Return(_v2_5);
+  vec2Return(_v2_6);
+  vec2Return(_v2_7);
+  vec2Return(_v2_8);
   return carveShape(diamond);
 }
 
@@ -29059,6 +29089,15 @@ function carveCircle(cx, cy, r) {
   if (window.__DEV__) {
     console.log('Carving cicle:', cx, cy, r);
   }
+
+  const _v2_5 = vec2Borrow();
+  const _v2_6 = vec2Borrow();
+  const _v2_7 = vec2Borrow();
+  const _v2_8 = vec2Borrow();
+  const _v2_9 = vec2Borrow();
+  const _v2_10 = vec2Borrow();
+  const _v2_11 = vec2Borrow();
+  const _v2_12 = vec2Borrow();
   const radj = r + 0.01;
   const angle = 2 * Math.PI / 8;
 
@@ -29072,6 +29111,14 @@ function carveCircle(cx, cy, r) {
     vec2.set(_v2_11, cx + radj * Math.cos(angle * 6), cy + radj * Math.sin(angle * 6)),
     vec2.set(_v2_12, cx + radj * Math.cos(angle * 7), cy + radj * Math.sin(angle * 7)),
   ];
+  vec2Return(_v2_5);
+  vec2Return(_v2_6);
+  vec2Return(_v2_7);
+  vec2Return(_v2_8);
+  vec2Return(_v2_9);
+  vec2Return(_v2_10);
+  vec2Return(_v2_11);
+  vec2Return(_v2_12);
   return carveShape(circle);
 }
 
@@ -29113,14 +29160,13 @@ module.exports = {
   form,
   gridify,
   split: splitWithSegment,
-  splitShape,
   carveShape,
   carveRect,
   carveDiamond,
   carveCircle,
 };
 
-},{"./geometry":212,"./halfedges":213,"./mapper":216,"gl-vec2":102,"gl-vec3":147,"lodash":190}],215:[function(require,module,exports){
+},{"./bank":212,"./geometry":213,"./halfedges":214,"./mapper":217,"gl-vec2":102,"gl-vec3":147,"lodash":190}],216:[function(require,module,exports){
 
 const Renderer = require('./render');
 const Mapper = require('./mapper');
@@ -29147,10 +29193,12 @@ renderer.setupMap(
 );
 renderer.render();
 
-},{"./hedges":214,"./mapper":216,"./render":218}],216:[function(require,module,exports){
+},{"./hedges":215,"./mapper":217,"./render":219}],217:[function(require,module,exports){
 
 const random = require('./random');
 const Hedges = require('./hedges');
+
+const {vec2Borrow, vec2Return} = require('./bank');
 
 const vec2 = require('gl-vec2');
 const mat3 = require('gl-mat3');
@@ -29282,15 +29330,19 @@ function generate(x, y) {
   });
 
   // Axis reflections
+  const borrowed = [];
   console.log('Reflecting over ', axis);
   cycles.forEach(cycle => {
     const naturals = Hedges.naturals.fromCycle(cycle);
     const reflection = naturals.map(n => {
-      const reflected = vec2.transformMat3(vec2.create(), n, AXES[axis]);
+      const v2 = vec2Borrow();
+      const reflected = vec2.transformMat3(v2, n, AXES[axis]);
+      borrowed.push(v2);
       return reflected;
     });
     console.log(naturals, reflection);
   });
+  borrowed.forEach(vec2Return);
 
   const upMap = map[getMapKey(x, y-1)];
   const downMap = map[getMapKey(x, y+1)];
@@ -29328,7 +29380,7 @@ module.exports = {
   generate,
 };
 
-},{"./hedges":214,"./random":217,"gl-mat3":34,"gl-vec2":102}],217:[function(require,module,exports){
+},{"./bank":212,"./hedges":215,"./random":218,"gl-mat3":34,"gl-vec2":102}],218:[function(require,module,exports){
 
 const MersenneTwister = require('mersenne-twister');
 
@@ -29386,7 +29438,7 @@ module.exports = {
 };
 
 
-},{"mersenne-twister":191}],218:[function(require,module,exports){
+},{"mersenne-twister":191}],219:[function(require,module,exports){
 
 const createGeometry = require('gl-geometry');
 const createShader = require('gl-shader');
@@ -29499,4 +29551,4 @@ class Renderer {
 module.exports = Renderer;
 
 
-},{"gl-geometry":22,"gl-mat4":58,"gl-shader":73,"gl-vec3":147,"perspective-camera":196}]},{},[215]);
+},{"gl-geometry":22,"gl-mat4":58,"gl-shader":73,"gl-vec3":147,"perspective-camera":196}]},{},[216]);

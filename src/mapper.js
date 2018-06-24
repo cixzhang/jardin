@@ -2,6 +2,8 @@
 const random = require('./random');
 const Hedges = require('./hedges');
 
+const {vec2Borrow, vec2Return} = require('./bank');
+
 const vec2 = require('gl-vec2');
 const mat3 = require('gl-mat3');
 
@@ -132,15 +134,19 @@ function generate(x, y) {
   });
 
   // Axis reflections
+  const borrowed = [];
   console.log('Reflecting over ', axis);
   cycles.forEach(cycle => {
     const naturals = Hedges.naturals.fromCycle(cycle);
     const reflection = naturals.map(n => {
-      const reflected = vec2.transformMat3(vec2.create(), n, AXES[axis]);
+      const v2 = vec2Borrow();
+      const reflected = vec2.transformMat3(v2, n, AXES[axis]);
+      borrowed.push(v2);
       return reflected;
     });
     console.log(naturals, reflection);
   });
+  borrowed.forEach(vec2Return);
 
   const upMap = map[getMapKey(x, y-1)];
   const downMap = map[getMapKey(x, y+1)];
