@@ -17,14 +17,21 @@ if (window.__DEV__) {
 }
 
 const garden = Mapper.generate(0, 0);
+const renderer = new Renderer(canvas);
 
-Assets.initialize().then(() => {
-  const renderer = new Renderer(canvas);
+Assets.initialize().then(start);
+
+function start() {
   renderer.setupTextures();
+  requestAnimationFrame(update);
+}
+
+function update() {
   renderer.setupMap(
     Hedges.form(),
     garden.geometry,
     __DEV__ && false
   );
   renderer.render();
-});
+  requestAnimationFrame(update);
+}

@@ -35086,17 +35086,24 @@ if (window.__DEV__) {
 }
 
 const garden = Mapper.generate(0, 0);
+const renderer = new Renderer(canvas);
 
-Assets.initialize().then(() => {
-  const renderer = new Renderer(canvas);
+Assets.initialize().then(start);
+
+function start() {
   renderer.setupTextures();
+  requestAnimationFrame(update);
+}
+
+function update() {
   renderer.setupMap(
     Hedges.form(),
     garden.geometry,
     __DEV__ && false
   );
   renderer.render();
-});
+  requestAnimationFrame(update);
+}
 
 },{"./assets":245,"./hedges":249,"./mapper":251,"./render":253}],251:[function(require,module,exports){
 
@@ -35485,7 +35492,7 @@ class Renderer {
   }
 
   render() {
-    this.gl.clearColor(0, 0, 0, 1);
+    this.gl.clearColor(1, 1, 1, 1);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     this.resize();
