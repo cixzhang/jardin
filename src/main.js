@@ -2,6 +2,7 @@
 const Renderer = require('./render');
 const Mapper = require('./mapper');
 const Hedges = require('./hedges');
+const Assets = require('./assets');
 
 const canvas = document.getElementById('canvas');
 
@@ -11,15 +12,19 @@ if (window.__DEV__) {
     Renderer,
     Mapper,
     Hedges,
+    Assets,
   };
 }
 
 const garden = Mapper.generate(0, 0);
 
-const renderer = new Renderer(canvas);
-renderer.setupMap(
-  Hedges.form(),
-  garden.geometry,
-  __DEV__ && false
-);
-renderer.render();
+Assets.initialize().then(() => {
+  const renderer = new Renderer(canvas);
+  renderer.setupTextures();
+  renderer.setupMap(
+    Hedges.form(),
+    garden.geometry,
+    __DEV__ && false
+  );
+  renderer.render();
+});

@@ -1,9 +1,13 @@
 
 const createGeometry = require('gl-geometry');
 const createShader = require('gl-shader');
+const createTexture = require('gl-texture2d');
 const createCamera = require('perspective-camera');
 const mat4 = require('gl-mat4');
+const vec2 = require('gl-vec2');
 const vec3 = require('gl-vec3');
+
+const assets = require('./assets');
 
 const vs = `
   attribute vec3 position;
@@ -34,11 +38,11 @@ const fs = `
 const cvs = `
   attribute vec3 position;
   attribute vec2 texcoord;
-  uniform mat4 projection, view;
+  uniform mat4 projection;
   varying vec2 v_texcoord;
 
   void main() {
-    gl_Position = projection*view*vec4(position, 1.0);
+    gl_Position = projection*vec4(position, 1.0);
     // Pass the texcoord to the fragment shader.
     v_texcoord = texcoord;
   }
@@ -53,8 +57,6 @@ const cfs = `
   }
 `;
 
-const gardener = require('../assets/gardener');
-
 class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -68,7 +70,14 @@ class Renderer {
     this.eye = vec3.create();
     vec3.set(this.eye, 0.5, 0, 0.5);
     this.mapgeo = createGeometry(this.gl);
+
     this.chargeo = createGeometry(this.gl);
+    this.chargeo.attr('position', assets.quad);
+    this.charFrameName = 'faceDown';
+    this.charFrameIndex = 0;
+    this.charTransform = mat4.create();
+    this.charTexture = null;
+    this.charPosition = vec2.create();
 
     this.colorHedge = vec3.create();
     vec3.set(this.colorHedge, 0.60, 0.69, 0.23);
@@ -83,6 +92,10 @@ class Renderer {
     ];
 
     this.gl.enable(this.gl.DEPTH_TEST);
+  }
+
+  setupTextures() {
+    this.charTexture = createTexture(this.gl, assets.gardener.texture);
   }
 
   setupMap(map, hiddenCycles, debug) {
@@ -102,6 +115,28 @@ class Renderer {
       .attr('hidden', hidden, {size: 1});
   }
 
+  setupCharacter(frameName, x, y) {
+    if (!(frameName in assets.gardener.frames)) {
+      console.error('Attempted to use frame that did not exist:', frameName);
+    }
+
+    this.charFrameIndex = 0;
+    this.charFrameName = frameName;
+    vec2.set(this.charPosition, x, y);
+  }
+
+  updateCharacter() {
+    const uvFrames = assets.gardener.uvFrames[this.charFrameName];
+    this.chargeo.attr('texcoord', uvFrames[this.charFrameIndex], {size: 2});
+    this.charTransform = assets.getQuadToScreen(
+      this.charTransform,
+      assets.gardener,
+      this.charPosition,
+      this.canvas.width,
+      this.canvas.height
+    );
+  }
+
   resize() {
     const canvas = this.canvas;
     const gl = this.gl;
@@ -117,6 +152,9 @@ class Renderer {
   }
 
   render() {
+    this.gl.clearColor(0, 0, 0, 1);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
     this.resize();
     this.camera.viewport = [0, 0, this.canvas.width, this.canvas.height];
     this.camera.lookAt(this.eye);
@@ -133,7 +171,15 @@ class Renderer {
     mapgeo.unbind();
 
     // Render sprite
+    if (!this.charTexture) return;
 
+    this.updateCharacter();
+    const chargeo = this.chargeo;
+    chargeo.bind(this.characterShader);
+    this.characterShader.uniforms.projection = this.charTransform;
+    this.characterShader.uniforms.texture = this.charTexture.bind();
+    chargeo.draw();
+    chargeo.unbind();
   }
 }
 

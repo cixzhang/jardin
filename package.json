@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prepare": "npm run image && browserify src/main.js > build/main.js && echo 'Build Complete'",
-    "image": "ndpack-image assets/gardener.png > assets/gardener.js",
+    "prepare": "browserify src/main.js > build/main.js && echo 'Build Complete'",
     "start": "watch 'npm run prepare' ./src -d",
     "server": "http-server ."
   },
@@ -20,12 +19,14 @@
   },
   "homepage": "https://github.com/cixzhang/jardin#readme",
   "dependencies": {
+    "get-pixels": "^3.3.0",
     "gl-geometry": "^3.1.1",
     "gl-mat2": "^1.0.1",
     "gl-mat3": "^1.0.0",
     "gl-mat4": "^1.2.0",
     "gl-matrix": "^2.6.1",
     "gl-shader": "^4.2.1",
+    "gl-texture2d": "^2.1.0",
     "gl-vec2": "^1.2.0",
     "gl-vec3": "^1.1.3",
     "lodash": "^4.17.10",

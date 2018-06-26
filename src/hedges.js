@@ -310,7 +310,7 @@ function form() {
       const trace = getCycleId(cycle);
       const srcs = cycle.map(h => {
         const n = naturals[halfedges.src(h)];
-        return v2ToV3(vec3.create(), n, 0.1, true);
+        return v2ToV3(vec3.create(), n, -0.1, true);
       });
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
