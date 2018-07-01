@@ -3,6 +3,8 @@ const Renderer = require('./render');
 const Mapper = require('./mapper');
 const Hedges = require('./hedges');
 const Assets = require('./assets');
+const Player = require('./player');
+const Keys = require('./keys');
 
 const canvas = document.getElementById('canvas');
 
@@ -13,12 +15,15 @@ if (window.__DEV__) {
     Mapper,
     Hedges,
     Assets,
+    Player,
+    Keys,
   };
 }
 
 const garden = Mapper.generate(0, 0);
 const renderer = new Renderer(canvas);
 
+Keys.setup();
 Assets.initialize().then(start);
 
 function start() {
@@ -26,12 +31,14 @@ function start() {
   requestAnimationFrame(update);
 }
 
-function update() {
+function update(time) {
+  Player.update();
+  renderer.setupCharacter(Player.frame, Player.x, Player.y);
   renderer.setupMap(
     Hedges.form(),
     garden.geometry,
     __DEV__ && false
   );
-  renderer.render();
+  renderer.render(time);
   requestAnimationFrame(update);
 }

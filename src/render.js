@@ -61,6 +61,7 @@ class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.gl = canvas.getContext('webgl');
+
     this.mapShader = createShader(this.gl, vs, fs);
     this.characterShader = createShader(this.gl, cvs, cfs);
 
@@ -75,6 +76,8 @@ class Renderer {
     this.chargeo.attr('position', assets.quad);
     this.charFrameName = 'faceDown';
     this.charFrameIndex = 0;
+    this.charUpdateTime = null;
+
     this.charTransform = mat4.create();
     this.charTexture = null;
     this.charPosition = vec2.create();
@@ -120,12 +123,19 @@ class Renderer {
       console.error('Attempted to use frame that did not exist:', frameName);
     }
 
-    this.charFrameIndex = 0;
-    this.charFrameName = frameName;
+    if (frameName !== this.charFrameName) {
+      this.charFrameIndex = 0;
+      this.charFrameName = frameName;
+    }
     vec2.set(this.charPosition, x, y);
   }
 
-  updateCharacter() {
+  updateCharacter(time) {
+    const CHAR_MSPF = 1000/10;
+    if (!this.charUpdateTime) {
+      this.charUpdateTime = time;
+    }
+
     const uvFrames = assets.gardener.uvFrames[this.charFrameName];
     this.chargeo.attr('texcoord', uvFrames[this.charFrameIndex], {size: 2});
     this.charTransform = assets.getQuadToScreen(
@@ -135,6 +145,11 @@ class Renderer {
       this.canvas.width,
       this.canvas.height
     );
+
+    if (time - this.charUpdateTime > CHAR_MSPF) {
+      this.charFrameIndex = (this.charFrameIndex + 1) % uvFrames.length;
+      this.charUpdateTime = time;
+    }
   }
 
   resize() {
@@ -151,7 +166,7 @@ class Renderer {
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
 
-  render() {
+  render(time) {
     this.gl.clearColor(1, 1, 1, 1);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
@@ -173,7 +188,7 @@ class Renderer {
     // Render sprite
     if (!this.charTexture) return;
 
-    this.updateCharacter();
+    this.updateCharacter(time);
     const chargeo = this.chargeo;
     chargeo.bind(this.characterShader);
     this.characterShader.uniforms.projection = this.charTransform;

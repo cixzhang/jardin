@@ -35066,12 +35066,36 @@ module.exports = {
   carveCircle,
 };
 
-},{"./bank":246,"./geometry":247,"./halfedges":248,"./mapper":251,"gl-vec2":108,"gl-vec3":153,"lodash":197}],250:[function(require,module,exports){
+},{"./bank":246,"./geometry":247,"./halfedges":248,"./mapper":252,"gl-vec2":108,"gl-vec3":153,"lodash":197}],250:[function(require,module,exports){
+
+const keyState = {};
+
+function setup() {
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+}
+
+function onKeyDown(e) {
+  keyState[e.key] = 1;
+}
+
+function onKeyUp(e) {
+  keyState[e.key] = 0;
+}
+
+module.exports = {
+  setup,
+  keyState,
+};
+
+},{}],251:[function(require,module,exports){
 
 const Renderer = require('./render');
 const Mapper = require('./mapper');
 const Hedges = require('./hedges');
 const Assets = require('./assets');
+const Player = require('./player');
+const Keys = require('./keys');
 
 const canvas = document.getElementById('canvas');
 
@@ -35082,12 +35106,15 @@ if (window.__DEV__) {
     Mapper,
     Hedges,
     Assets,
+    Player,
+    Keys,
   };
 }
 
 const garden = Mapper.generate(0, 0);
 const renderer = new Renderer(canvas);
 
+Keys.setup();
 Assets.initialize().then(start);
 
 function start() {
@@ -35095,17 +35122,19 @@ function start() {
   requestAnimationFrame(update);
 }
 
-function update() {
+function update(time) {
+  Player.update();
+  renderer.setupCharacter(Player.frame, Player.x, Player.y);
   renderer.setupMap(
     Hedges.form(),
     garden.geometry,
     __DEV__ && false
   );
-  renderer.render();
+  renderer.render(time);
   requestAnimationFrame(update);
 }
 
-},{"./assets":245,"./hedges":249,"./mapper":251,"./render":253}],251:[function(require,module,exports){
+},{"./assets":245,"./hedges":249,"./keys":250,"./mapper":252,"./player":253,"./render":255}],252:[function(require,module,exports){
 
 const random = require('./random');
 const Hedges = require('./hedges');
@@ -35279,7 +35308,67 @@ module.exports = {
   generate,
 };
 
-},{"./bank":246,"./hedges":249,"./random":252,"gl-mat3":39,"gl-vec2":108,"lodash":197}],252:[function(require,module,exports){
+},{"./bank":246,"./hedges":249,"./random":254,"gl-mat3":39,"gl-vec2":108,"lodash":197}],253:[function(require,module,exports){
+
+const { keyState } = require('./keys');
+
+const Player = {};
+Player.frame = 'faceDown';
+Player.x = 0;
+Player.y = 0;
+
+function stand() {
+  if (
+    keyState.ArrowUp ||
+    keyState.ArrowRight ||
+    keyState.ArrowLeft ||
+    keyState.ArrowDown
+  ) {
+    return move;
+  }
+
+  Player.frame = Player.frame.replace('walk', 'face');
+  Player.frame = Player.frame.replace('pick', 'face');
+  return stand;
+}
+
+function move() {
+  if (
+    !keyState.ArrowUp &&
+    !keyState.ArrowRight &&
+    !keyState.ArrowLeft &&
+    !keyState.ArrowDown
+  ) {
+    return stand;
+  }
+
+  if (keyState.ArrowUp) {
+    Player.frame = 'walkUp';
+    Player.y += 0.005;
+  }
+  if (keyState.ArrowRight) {
+    Player.frame = 'walkRight';
+    Player.x += 0.005;
+  }
+  if (keyState.ArrowLeft) {
+    Player.frame = 'walkLeft';
+    Player.x -= 0.005;
+  }
+  if (keyState.ArrowDown) {
+    Player.frame = 'walkDown';
+    Player.y -= 0.005;
+  }
+  return move;
+}
+
+Player.state = stand;
+Player.update = () => {
+  Player.state = Player.state();
+};
+
+module.exports = Player;
+
+},{"./keys":250}],254:[function(require,module,exports){
 
 const MersenneTwister = require('mersenne-twister');
 
@@ -35337,7 +35426,7 @@ module.exports = {
 };
 
 
-},{"mersenne-twister":198}],253:[function(require,module,exports){
+},{"mersenne-twister":198}],255:[function(require,module,exports){
 
 const createGeometry = require('gl-geometry');
 const createShader = require('gl-shader');
@@ -35401,6 +35490,7 @@ class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.gl = canvas.getContext('webgl');
+
     this.mapShader = createShader(this.gl, vs, fs);
     this.characterShader = createShader(this.gl, cvs, cfs);
 
@@ -35415,6 +35505,8 @@ class Renderer {
     this.chargeo.attr('position', assets.quad);
     this.charFrameName = 'faceDown';
     this.charFrameIndex = 0;
+    this.charUpdateTime = null;
+
     this.charTransform = mat4.create();
     this.charTexture = null;
     this.charPosition = vec2.create();
@@ -35460,12 +35552,19 @@ class Renderer {
       console.error('Attempted to use frame that did not exist:', frameName);
     }
 
-    this.charFrameIndex = 0;
-    this.charFrameName = frameName;
+    if (frameName !== this.charFrameName) {
+      this.charFrameIndex = 0;
+      this.charFrameName = frameName;
+    }
     vec2.set(this.charPosition, x, y);
   }
 
-  updateCharacter() {
+  updateCharacter(time) {
+    const CHAR_MSPF = 1000/10;
+    if (!this.charUpdateTime) {
+      this.charUpdateTime = time;
+    }
+
     const uvFrames = assets.gardener.uvFrames[this.charFrameName];
     this.chargeo.attr('texcoord', uvFrames[this.charFrameIndex], {size: 2});
     this.charTransform = assets.getQuadToScreen(
@@ -35475,6 +35574,11 @@ class Renderer {
       this.canvas.width,
       this.canvas.height
     );
+
+    if (time - this.charUpdateTime > CHAR_MSPF) {
+      this.charFrameIndex = (this.charFrameIndex + 1) % uvFrames.length;
+      this.charUpdateTime = time;
+    }
   }
 
   resize() {
@@ -35491,7 +35595,7 @@ class Renderer {
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
 
-  render() {
+  render(time) {
     this.gl.clearColor(1, 1, 1, 1);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
@@ -35513,7 +35617,7 @@ class Renderer {
     // Render sprite
     if (!this.charTexture) return;
 
-    this.updateCharacter();
+    this.updateCharacter(time);
     const chargeo = this.chargeo;
     chargeo.bind(this.characterShader);
     this.characterShader.uniforms.projection = this.charTransform;
@@ -35526,4 +35630,4 @@ class Renderer {
 module.exports = Renderer;
 
 
-},{"./assets":245,"gl-geometry":27,"gl-mat4":63,"gl-shader":78,"gl-texture2d":85,"gl-vec2":108,"gl-vec3":153,"perspective-camera":207}]},{},[250]);
+},{"./assets":245,"gl-geometry":27,"gl-mat4":63,"gl-shader":78,"gl-texture2d":85,"gl-vec2":108,"gl-vec3":153,"perspective-camera":207}]},{},[251]);
