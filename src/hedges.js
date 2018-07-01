@@ -5,7 +5,7 @@ const vec3 = require('gl-vec3');
 const Halfedges = require('./halfedges');
 
 const {vec2Borrow, vec2Return} = require('./bank');
-const {ss, contained, v2ToV3, EPSILON} = require('./geometry');
+const {ss, contained, getNormal, v2ToV3, EPSILON} = require('./geometry');
 const {AXES} = require('./mapper');
 
 const halfedges = Halfedges.makeRing(4);
@@ -293,7 +293,7 @@ function carveCircle(cx, cy, r) {
 function triangulate(points) {
   if (points.length <= 3) return [points];
   const triangles = [];
-  for (var i = 1; i < points.length; i++) {
+  for (var i = 2; i < points.length; i++) {
     triangles.push([points[0], points[i-1], points[i]]);
   }
   return triangles;
@@ -303,6 +303,7 @@ function triangulate(points) {
 function form() {
   const positions = [];
   const cycles = [];
+  const normals = [];
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
@@ -314,12 +315,28 @@ function form() {
       });
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
+        const normal = getNormal(vec3.create(), t[0], t[1], t[2]);
         positions.push.apply(positions, t);
         cycles.push.apply(cycles, t.map(_ => trace));
+        normals.push.apply(normals, t.map(_ => normal));
       });
+
+      // Form sides
+      for (let i = 0; i < srcs.length; i++) {
+        let next = srcs[(i+1) % srcs.length];
+        let u = vec3.set(vec3.create(), srcs[i][0], -0.2, srcs[i][2]);
+        let u_next = vec3.set(vec3.create(), next[0], -0.2, next[2]);
+        const triangulated = triangulate([next,srcs[i],u,u_next]);
+        triangulated.forEach(t => {
+          const normal = getNormal(vec3.create(), t[0], t[1], t[2]);
+          positions.push.apply(positions, t);
+          cycles.push.apply(cycles, t.map(_ => trace));
+          normals.push.apply(normals, t.map(_ => normal));
+        });
+      }
     }
   );
-  return {positions, cycles};
+  return {positions, cycles, normals};
 }
 
 module.exports = {

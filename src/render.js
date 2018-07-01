@@ -196,6 +196,9 @@ class Renderer {
     this.characterShader.uniforms.texture = this.charTexture.bind();
     chargeo.draw();
     chargeo.unbind();
+
+    this.eye[0] = 0.5 - this.charPosition[0];
+    this.eye[2] = this.charPosition[1] + 0.5;
   }
 }
 

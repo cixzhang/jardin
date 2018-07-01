@@ -34395,6 +34395,9 @@ var _v2_2 = vec2.create();
 var _v2_3 = vec2.create();
 var _v2_4 = vec2.create();
 
+var _v3_0 = vec3.create();
+var _v3_1 = vec3.create();
+
 // Returns null if the lines are parallel.
 function ll(result, x0, d0, x1, d1) {
   result = result || vec2.create();
@@ -34490,7 +34493,15 @@ function v2ToV3(result, v2, z, swap) {
   return v3;
 }
 
-module.exports = { ll, ss, contained, v2ToV3, EPSILON };
+function getNormal(result, v3a, v3b, v3c) {
+  const v3 = result || vec3.create();
+  const u = vec3.subtract(_v3_0, v3c, v3a);
+  const v = vec3.subtract(_v3_1, v3b, v3a);
+  vec3.cross(v3, u, v);
+  return v3;
+}
+
+module.exports = { ll, ss, contained, v2ToV3, getNormal, EPSILON };
 
 },{"gl-vec2":108,"gl-vec3":153,"lodash":197}],248:[function(require,module,exports){
 // from https://github.com/kokorigami/kokorigami/blob/master/lib/halfedges.js
@@ -34734,7 +34745,7 @@ const vec3 = require('gl-vec3');
 const Halfedges = require('./halfedges');
 
 const {vec2Borrow, vec2Return} = require('./bank');
-const {ss, contained, v2ToV3, EPSILON} = require('./geometry');
+const {ss, contained, getNormal, v2ToV3, EPSILON} = require('./geometry');
 const {AXES} = require('./mapper');
 
 const halfedges = Halfedges.makeRing(4);
@@ -35022,7 +35033,7 @@ function carveCircle(cx, cy, r) {
 function triangulate(points) {
   if (points.length <= 3) return [points];
   const triangles = [];
-  for (var i = 1; i < points.length; i++) {
+  for (var i = 2; i < points.length; i++) {
     triangles.push([points[0], points[i-1], points[i]]);
   }
   return triangles;
@@ -35032,6 +35043,7 @@ function triangulate(points) {
 function form() {
   const positions = [];
   const cycles = [];
+  const normals = [];
   halfedges.cycles.forEach(
     (cycle, i) => {
       if (i === 0) return; // skip the outside
@@ -35043,12 +35055,28 @@ function form() {
       });
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
+        const normal = getNormal(vec3.create(), t[0], t[1], t[2]);
         positions.push.apply(positions, t);
         cycles.push.apply(cycles, t.map(_ => trace));
+        normals.push.apply(normals, t.map(_ => normal));
       });
+
+      // Form sides
+      for (let i = 0; i < srcs.length; i++) {
+        let next = srcs[(i+1) % srcs.length];
+        let u = vec3.set(vec3.create(), srcs[i][0], -0.2, srcs[i][2]);
+        let u_next = vec3.set(vec3.create(), next[0], -0.2, next[2]);
+        const triangulated = triangulate([next,srcs[i],u,u_next]);
+        triangulated.forEach(t => {
+          const normal = getNormal(vec3.create(), t[0], t[1], t[2]);
+          positions.push.apply(positions, t);
+          cycles.push.apply(cycles, t.map(_ => trace));
+          normals.push.apply(normals, t.map(_ => normal));
+        });
+      }
     }
   );
-  return {positions, cycles};
+  return {positions, cycles, normals};
 }
 
 module.exports = {
@@ -35129,7 +35157,7 @@ function update(time) {
   renderer.setupMap(
     hedges,
     garden.geometry,
-    __DEV__ && false
+    __DEV__ && true
   );
   renderer.render(time);
   requestAnimationFrame(update);
@@ -35626,6 +35654,9 @@ class Renderer {
     this.characterShader.uniforms.texture = this.charTexture.bind();
     chargeo.draw();
     chargeo.unbind();
+
+    this.eye[0] = 0.5 - this.charPosition[0];
+    this.eye[2] = this.charPosition[1] + 0.5;
   }
 }
 

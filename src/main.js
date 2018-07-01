@@ -38,7 +38,7 @@ function update(time) {
   renderer.setupMap(
     hedges,
     garden.geometry,
-    __DEV__ && false
+    __DEV__ && true
   );
   renderer.render(time);
   requestAnimationFrame(update);

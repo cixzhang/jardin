@@ -12,6 +12,9 @@ var _v2_2 = vec2.create();
 var _v2_3 = vec2.create();
 var _v2_4 = vec2.create();
 
+var _v3_0 = vec3.create();
+var _v3_1 = vec3.create();
+
 // Returns null if the lines are parallel.
 function ll(result, x0, d0, x1, d1) {
   result = result || vec2.create();
@@ -107,4 +110,12 @@ function v2ToV3(result, v2, z, swap) {
   return v3;
 }
 
-module.exports = { ll, ss, contained, v2ToV3, EPSILON };
+function getNormal(result, v3a, v3b, v3c) {
+  const v3 = result || vec3.create();
+  const u = vec3.subtract(_v3_0, v3c, v3a);
+  const v = vec3.subtract(_v3_1, v3b, v3a);
+  vec3.cross(v3, u, v);
+  return v3;
+}
+
+module.exports = { ll, ss, contained, v2ToV3, getNormal, EPSILON };
