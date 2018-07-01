@@ -11,10 +11,12 @@ const assets = require('./assets');
 
 const vs = `
   attribute vec3 position;
+  attribute vec3 normal;
   attribute vec3 color;
   attribute float hidden;
   uniform mat4 projection, view;
   varying vec3 v_position;
+  varying vec3 v_normal;
   varying vec3 v_color;
   varying float v_hidden;
   void main() {
@@ -22,16 +24,23 @@ const vs = `
     v_position = gl_Position.xyz;
     v_color = color;
     v_hidden = hidden;
+    v_normal = normal;
   }
 `;
 
 const fs = `
   precision mediump float;
   varying vec3 v_position;
+  varying vec3 v_normal;
   varying vec3 v_color;
   varying float v_hidden;
   void main() {
-    gl_FragColor = vec4(v_color, 1.0 - v_hidden);
+    vec4 shadow = vec4(v_color*v_normal.y, 1.0);
+    gl_FragColor = vec4(
+      (v_color.r + shadow.r) / 2.0,
+      (v_color.g + shadow.g) / 2.0,
+      (v_color.b + shadow.b) / 2.0,
+      1.0 - v_hidden);
   }
 `;
 
@@ -116,6 +125,7 @@ class Renderer {
 
     this.mapgeo
       .attr('position', map.positions)
+      .attr('normal', map.normals)
       .attr('color', colors)
       .attr('hidden', hidden, {size: 1});
   }

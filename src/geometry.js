@@ -115,6 +115,7 @@ function getNormal(result, v3a, v3b, v3c) {
   const u = vec3.subtract(_v3_0, v3c, v3a);
   const v = vec3.subtract(_v3_1, v3b, v3a);
   vec3.cross(v3, u, v);
+  vec3.normalize(v3, v3);
   return v3;
 }
 

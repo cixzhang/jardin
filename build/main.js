@@ -34498,6 +34498,7 @@ function getNormal(result, v3a, v3b, v3c) {
   const u = vec3.subtract(_v3_0, v3c, v3a);
   const v = vec3.subtract(_v3_1, v3b, v3a);
   vec3.cross(v3, u, v);
+  vec3.normalize(v3, v3);
   return v3;
 }
 
@@ -35157,7 +35158,7 @@ function update(time) {
   renderer.setupMap(
     hedges,
     garden.geometry,
-    __DEV__ && true
+    __DEV__ && false
   );
   renderer.render(time);
   requestAnimationFrame(update);
@@ -35469,10 +35470,12 @@ const assets = require('./assets');
 
 const vs = `
   attribute vec3 position;
+  attribute vec3 normal;
   attribute vec3 color;
   attribute float hidden;
   uniform mat4 projection, view;
   varying vec3 v_position;
+  varying vec3 v_normal;
   varying vec3 v_color;
   varying float v_hidden;
   void main() {
@@ -35480,16 +35483,23 @@ const vs = `
     v_position = gl_Position.xyz;
     v_color = color;
     v_hidden = hidden;
+    v_normal = normal;
   }
 `;
 
 const fs = `
   precision mediump float;
   varying vec3 v_position;
+  varying vec3 v_normal;
   varying vec3 v_color;
   varying float v_hidden;
   void main() {
-    gl_FragColor = vec4(v_color, 1.0 - v_hidden);
+    vec4 shadow = vec4(v_color*v_normal.y, 1.0);
+    gl_FragColor = vec4(
+      (v_color.r + shadow.r) / 2.0,
+      (v_color.g + shadow.g) / 2.0,
+      (v_color.b + shadow.b) / 2.0,
+      1.0 - v_hidden);
   }
 `;
 
@@ -35574,6 +35584,7 @@ class Renderer {
 
     this.mapgeo
       .attr('position', map.positions)
+      .attr('normal', map.normals)
       .attr('color', colors)
       .attr('hidden', hidden, {size: 1});
   }
