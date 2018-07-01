@@ -95,6 +95,8 @@ class Renderer {
     ];
 
     this.gl.enable(this.gl.DEPTH_TEST);
+    this.gl.enable(this.gl.BLEND);
+    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
   }
 
   setupTextures() {
@@ -167,7 +169,6 @@ class Renderer {
   }
 
   render(time) {
-    this.gl.clearColor(1, 1, 1, 1);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     this.resize();
