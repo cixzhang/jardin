@@ -35054,9 +35054,9 @@ function form() {
         const n = naturals[halfedges.src(h)];
         return v2ToV3(vec3.create(), n, -0.1, true);
       });
+      const normal = getNormal(vec3.create(), srcs[0], srcs[1], srcs[2]);
       const triangulated = triangulate(srcs);
       triangulated.forEach(t => {
-        const normal = getNormal(vec3.create(), t[0], t[1], t[2]);
         positions.push.apply(positions, t);
         cycles.push.apply(cycles, t.map(_ => trace));
         normals.push.apply(normals, t.map(_ => normal));
@@ -35067,9 +35067,9 @@ function form() {
         let next = srcs[(i+1) % srcs.length];
         let u = vec3.set(vec3.create(), srcs[i][0], -0.2, srcs[i][2]);
         let u_next = vec3.set(vec3.create(), next[0], -0.2, next[2]);
+        const normal = getNormal(vec3.create(), next, srcs[i], u);
         const triangulated = triangulate([next,srcs[i],u,u_next]);
         triangulated.forEach(t => {
-          const normal = getNormal(vec3.create(), t[0], t[1], t[2]);
           positions.push.apply(positions, t);
           cycles.push.apply(cycles, t.map(_ => trace));
           normals.push.apply(normals, t.map(_ => normal));
