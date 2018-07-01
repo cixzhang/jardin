@@ -35113,6 +35113,7 @@ if (window.__DEV__) {
 
 const garden = Mapper.generate(0, 0);
 const renderer = new Renderer(canvas);
+const hedges = Hedges.form();
 
 Keys.setup();
 Assets.initialize().then(start);
@@ -35126,7 +35127,7 @@ function update(time) {
   Player.update();
   renderer.setupCharacter(Player.frame, Player.x, Player.y);
   renderer.setupMap(
-    Hedges.form(),
+    hedges,
     garden.geometry,
     __DEV__ && false
   );
